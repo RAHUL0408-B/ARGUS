@@ -1,0 +1,35 @@
+<?xml version="1.0" ?>
+<!-- SAMPLE FILE: written by the ARGUS team to exercise the Nessus *import* adapter.
+     It was NOT produced by a Nessus scan. ARGUS labels everything from this file as IMPORT (sample).
+     It deliberately contains no CVEs. -->
+<NessusClientData_v2>
+  <Policy><policyName>ARGUS sample (not a real scan)</policyName></Policy>
+  <Report name="argus-sample-import">
+    <ReportHost name="10.77.0.10">
+      <ReportItem port="80" svc_name="www" protocol="tcp" severity="2" pluginID="85582" pluginName="Web Application Potentially Vulnerable to Clickjacking" pluginFamily="CGI abuses">
+        <description>The remote web server does not set an X-Frame-Options response header or a Content-Security-Policy 'frame-ancestors' response header in all content responses.</description>
+        <solution>Return the X-Frame-Options or Content-Security-Policy (with the 'frame-ancestors' directive) HTTP header with the page's response.</solution>
+        <risk_factor>Medium</risk_factor>
+        <cvss_base_score>4.3</cvss_base_score>
+        <cvss_vector>CVSS2#AV:N/AC:M/Au:N/C:N/I:P/A:N</cvss_vector>
+        <cwe>1021</cwe>
+        <plugin_output>The following pages do not set a X-Frame-Options HTTP response header : http://10.77.0.10/</plugin_output>
+      </ReportItem>
+      <ReportItem port="80" svc_name="www" protocol="tcp" severity="1" pluginID="26194" pluginName="Web Server Transmits Cleartext Credentials" pluginFamily="Web Servers">
+        <description>The remote web server contains several forms that are susceptible to submit their data over HTTP cleartext instead of HTTPS.</description>
+        <solution>Make sure that every sensitive form transmits content over HTTPS.</solution>
+        <risk_factor>Low</risk_factor>
+        <cwe>523</cwe>
+        <plugin_output>Page : /login.php
+Destination Page: /login.php</plugin_output>
+      </ReportItem>
+      <ReportItem port="80" svc_name="www" protocol="tcp" severity="1" pluginID="40984" pluginName="Browsable Web Directories" pluginFamily="CGI abuses">
+        <description>Several directories on the remote host are browsable (directory indexing is enabled).</description>
+        <solution>Make sure that browsable directories do not leak confidential information or give access to sensitive resources.</solution>
+        <risk_factor>Low</risk_factor>
+        <cwe>548</cwe>
+        <plugin_output>The following directories are browsable : http://10.77.0.10/config/</plugin_output>
+      </ReportItem>
+    </ReportHost>
+  </Report>
+</NessusClientData_v2>

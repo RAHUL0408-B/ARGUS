@@ -91,7 +91,9 @@ class Finding(BaseModel):
     confidence_reasons: list[str] = Field(default_factory=list)
     occurrences: list[Occurrence] = Field(default_factory=list)
     evidence_ids: list[str] = Field(default_factory=list)
+    affected_urls: list[str] = Field(default_factory=list)
     related: list[str] = Field(default_factory=list)
+    validation: dict[str, Any] = Field(default_factory=dict)   # {"verdict","reason","evidence_id","by","at"}
     risk: dict[str, Any] = Field(default_factory=dict)
     remediation: str = ""
     references: list[str] = Field(default_factory=list)

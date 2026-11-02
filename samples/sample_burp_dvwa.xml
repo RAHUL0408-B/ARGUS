@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<!-- SAMPLE FILE: written by the ARGUS team to exercise the Burp Suite *import* adapter.
+     It was NOT produced by Burp Suite. ARGUS labels everything from this file as IMPORT (sample). -->
+<issues burpVersion="sample">
+  <issue>
+    <serialNumber>1001</serialNumber>
+    <type>5244416</type>
+    <name>Cookie without HttpOnly flag set</name>
+    <host ip="10.77.0.10">http://10.77.0.10</host>
+    <path><![CDATA[/login.php]]></path>
+    <location><![CDATA[/login.php [PHPSESSID cookie]]]></location>
+    <severity>Low</severity>
+    <confidence>Firm</confidence>
+    <issueBackground><![CDATA[<p>If the HttpOnly attribute is set on a cookie, then the cookie's value cannot be read or set by client-side JavaScript.</p>]]></issueBackground>
+    <remediationBackground><![CDATA[<p>Set the HttpOnly flag on all session cookies.</p>]]></remediationBackground>
+    <vulnerabilityClassifications><![CDATA[<ul><li><a href="https://cwe.mitre.org/data/definitions/1004.html">CWE-1004: Sensitive Cookie Without 'HttpOnly' Flag</a></li></ul>]]></vulnerabilityClassifications>
+  </issue>
+  <issue>
+    <serialNumber>1002</serialNumber>
+    <type>2097920</type>
+    <name>Cross-site scripting (reflected)</name>
+    <host ip="10.77.0.10">http://10.77.0.10</host>
+    <path><![CDATA[/vulnerabilities/xss_r/]]></path>
+    <location><![CDATA[/vulnerabilities/xss_r/ [name parameter]]]></location>
+    <severity>High</severity>
+    <confidence>Certain</confidence>
+    <issueBackground><![CDATA[<p>Reflected cross-site scripting vulnerabilities arise when data is copied from a request and echoed into the application's immediate response in an unsafe way.</p>]]></issueBackground>
+    <remediationBackground><![CDATA[<p>Encode output according to context and validate input.</p>]]></remediationBackground>
+    <vulnerabilityClassifications><![CDATA[<ul><li><a href="https://cwe.mitre.org/data/definitions/79.html">CWE-79: Improper Neutralization of Input During Web Page Generation</a></li></ul>]]></vulnerabilityClassifications>
+  </issue>
+</issues>
