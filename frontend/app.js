@@ -22,6 +22,8 @@ async function init() {
   $("#btnPlan").onclick = () => create($("#req").value);
   $("#btnOos").onclick = () => { $("#req").value = "Assess 10.77.0.10 for web issues and also scan 8.8.8.8 and scanme.nmap.org"; create($("#req").value); };
   $("#mclose").onclick = () => $("#modal").classList.add("hidden");
+  const qs = new URLSearchParams(location.search);          // deep link: ?a=<assessment id>&tab=<tab name>
+  if (qs.get("a")) { await open(qs.get("a")); if (qs.get("tab")) tab(qs.get("tab")); }
 }
 function tab(t) {
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
@@ -39,6 +41,7 @@ async function create(request) {
 async function open(id) {
   cur = id; lastSeq = 0; events = []; if (es) es.close();
   await refresh();
+  if (new URLSearchParams(location.search).get("static")) { loadHist(); return; }   // static=1: no live stream (screenshots)
   es = new EventSource(`/api/assessments/${id}/events`);
   es.onmessage = m => { const e = JSON.parse(m.data); lastSeq = e.seq; events.push(e); renderTimeline(); schedule(); };
   loadHist();

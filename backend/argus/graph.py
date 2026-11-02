@@ -5,7 +5,7 @@ from .models import Finding
 
 
 def build(assessment_id: str) -> dict:
-    fs = [f for f in store.list_("finding", Finding, assessment_id) if f.status != "refuted"]
+    fs = [f for f in store.list_("finding", Finding, assessment_id) if f.status != "refuted" and f.severity != "info"]   # info items are context, not attack steps
     nodes: dict[str, dict] = {}
     edges: list[dict] = []
 
