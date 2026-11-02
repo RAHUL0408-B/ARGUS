@@ -169,3 +169,19 @@ def test_validated_confidence_survives_rescoring_and_synonyms_merge():
     fs = [x for x in store.list_("finding", Finding, AID) if x.issue_key == "directory-listing"]
     assert len(fs) == 1 and {o.tool for o in fs[0].occurrences} == {"zap", "nessus"}
     assert fs[0].status == "validated" and fs[0].confidence >= 90
+
+
+def test_report_builds_with_portless_import_findings_and_approvals():
+    from argus import report
+    from argus.models import Approval, Assessment, Scope
+    store.put("assessment", Assessment(id=AID, title="t", request="r", scope=Scope(targets=["10.77.0.0/24"]), targets=["10.77.0.10"]))
+    for i in range(1, 4):
+        ev(i)
+    o = imports.parse_openvas(AID, (SAMPLES / "sample_openvas_dvwa.xml").read_text(), "EV-0001").findings     # port is None
+    z = zap.parse_alerts(AID, ZAP_ALERTS[:1], "EV-0002").findings
+    correlation.ingest(AID, o + z)
+    store.put("approval", Approval(id="AP-001", assessment_id=AID, action={"action_id": "msf_check:F-001"}, reason="r", status="executed",
+                                   decided_by="Rahul", decided_at="2026-11-02T13:00:00+00:00", outcome="[+] 10.77.0.10:80 Apache/2.4.25 <b>x</b>"))
+    risk.rank(AID)
+    pdf = report.build_pdf(AID)
+    assert pdf.startswith(b"%PDF") and len(pdf) > 5000

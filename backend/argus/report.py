@@ -132,7 +132,7 @@ def build_pdf(aid: str) -> bytes:
               _p("The assessment followed the planning, discovery, attack (validation) and reporting phases of NIST SP 800-115. The agent selected each next action from its current evidence "
                  "(Decision Cards, Appendix C) rather than a fixed script. Every action passed a deterministic scope check and was written to a hash-chained audit log.", st["b"]),
               _p("Assets tested", st["h2"])]
-    assets = sorted({(f.asset.host, f.asset.port, f.asset.service) for f in fs})
+    assets = sorted({(f.asset.host, f.asset.port, f.asset.service) for f in fs}, key=lambda t: (t[0], t[1] or 0, t[2] or ""))
     story.append(_p(", ".join(f"{_e(h)}:{p or '-'} ({_e(s or 'n/a')})" for h, p, s in assets) or "No assets with findings.", st["s"]))
     story.append(_p("Tool execution summary", st["h2"]))
     rows = [["Job", "Tool", "Mode", "Target", "Status", "Started", "Detail"]]

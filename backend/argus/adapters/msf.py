@@ -42,11 +42,14 @@ class MetasploitAdapter(Adapter):
         ok, msg = self.available()
         if not ok:
             raise runner.ToolUnavailable(msg)
-        argv = ["docker", "run", "--rm", "--network", config.LAB_NETWORK, config.MSF_IMAGE, "msfconsole", "-q", "-x",
+        argv = ["docker", "run", "--rm", "--network", config.LAB_NETWORK, config.MSF_IMAGE, "./msfconsole", "-q", "-x",
                 f"use {module}; set RHOSTS {rhost}; set RPORT {rport}; run; exit"]
         code, out, err = runner.run_command(job, argv, timeout=timeout)
         path, sha = runner.save_artifact(aid, f"{job.id}_msf.txt", out + ("\n--stderr--\n" + err if err else ""))
         ev = runner.new_evidence(aid, "metasploit", "live", job.id, path, sha, "stdout", " ".join(argv[-1:]))
+        if code != 0 or not any(l.strip().startswith(("[+]", "[*]", "[-]")) for l in out.splitlines()):
+            job.status, job.error = "failed", (err or out or f"msfconsole exited with {code}")[:300]
+            raise RuntimeError(f"Metasploit module run produced no usable output: {job.error}")
         res = AdapterResult(evidence=[ev])
         res.notes.append("\n".join(l for l in out.splitlines() if l.strip().startswith(("[+]", "[*]", "[-]")))[:800])
         runner.finish_ok(job, ev.id)

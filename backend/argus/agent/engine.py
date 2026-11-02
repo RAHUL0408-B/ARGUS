@@ -446,9 +446,9 @@ def propose_validation(aid: str, finding_id: str, module: str, analyst: str = "a
         raise ValueError("finding not found or has no network service to validate")
     a = store.get("assessment", aid, Assessment)
     c = Candidate(action_id=f"msf_check:{f.id}:{module.split('/')[-1]}", tool="metasploit", kind="msf_check", target=f.asset.host, port=f.asset.port,
-                  intensity="exploit", cost="medium", noise="low", params={"finding_id": f.id, "module": module},
+                  intensity="intrusive", cost="medium", noise="low", params={"finding_id": f.id, "module": module},
                   why=f"Analyst {analyst} requested read-only module {module} against {f.asset.key()} to corroborate {f.id}.")
-    scopemod.enforce(a.scope, "metasploit", c.target, "exploit", c.port)   # scope still applies; raises if not allowed
+    scopemod.enforce(a.scope, "metasploit", c.target, "intrusive", c.port)   # scope still applies; raises if not allowed
     ap = Approval(id=f"AP-{store.count('approval', aid) + 1:03d}", assessment_id=aid, action=c.model_dump(), reason=c.why, finding_id=f.id)
     store.put("approval", ap)
     store.audit(aid, analyst, "approval.requested", {"id": ap.id, "action": c.action_id, "initiated_by": "analyst"})

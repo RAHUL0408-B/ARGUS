@@ -99,7 +99,7 @@ def generate(scope: Scope, targets: list[str], intents: dict, assets: list[Asset
         if msf_ready:
             for f in findings:
                 if f.cve and f.status == "suspected" and f.asset.port and is_http(f.asset.service or "http", f.asset.port):
-                    add(Candidate(action_id=f"msf_check:{f.id}", tool="metasploit", kind="msf_check", target=f.asset.host, port=f.asset.port, intensity="exploit",
+                    add(Candidate(action_id=f"msf_check:{f.id}", tool="metasploit", kind="msf_check", target=f.asset.host, port=f.asset.port, intensity="intrusive",
                                   cost="medium", noise="low", params={"finding_id": f.id, "module": "auxiliary/scanner/http/http_version"},
                                   why=f"{f.id} is a version-only suspicion; a read-only Metasploit auxiliary module can re-read the server version independently. Needs approval."))
     return cands, hyps
