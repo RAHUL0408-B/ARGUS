@@ -348,6 +348,20 @@ def _loop(aid: str) -> None:
         store.event(aid, "decision", card.model_dump())
         store.audit(aid, "agent", "decision", {"id": card.id, "chosen": card.chosen, "planner": planner_name})
         before = len(store.list_("finding", Finding, aid))
+        if c.kind == "validate":
+            # validations are single harmless GETs on different findings: run them together as one reasoned step
+            batch = [x for x in runnable if x.kind == "validate"]
+            card.chosen = [x.action_id for x in batch]
+            card.rationale = (f"{len(batch)} configuration findings can each be confirmed or refuted with one harmless GET. "
+                              "Doing this before ranking removes false positives so they do not distort priorities.")
+            verdicts = []
+            for x in batch:
+                r = execute(aid, x)
+                f = store.get("finding", x.params["finding_id"], Finding, aid)
+                verdicts.append(f"{f.id}: {f.validation.get('verdict', 'not run') if f else '?'}")
+            card.outcome = "validation verdicts: " + "; ".join(verdicts)
+            store.put("decision", card)
+            continue
         res = execute(aid, c)
         card.outcome = ("action failed or was blocked (see limitations)" if res is None else
                         f"completed: {len(res.findings)} raw finding(s), total findings {before} -> {len(store.list_('finding', Finding, aid))}")
@@ -419,6 +433,21 @@ def decide(aid: str, approval_id: str, approve: bool, analyst: str, comment: str
         ap.outcome = "rejected by analyst; not executed"
         store.put("approval", ap)
         _after_approval(aid)
+    return ap
+
+
+def request_again(aid: str, approval_id: str, analyst: str = "analyst") -> Approval:
+    """A failed approved action may be retried, but only through a NEW approval (each execution needs its own consent)."""
+    old = store.get("approval", approval_id, Approval, aid)
+    if not old or old.status != "failed":
+        raise ValueError("only a failed approval can be re-requested")
+    ap = Approval(id=f"AP-{store.count('approval', aid) + 1:03d}", assessment_id=aid, action=old.action,
+                  reason=old.reason + f" (retry of {old.id})", finding_id=old.finding_id)
+    store.put("approval", ap)
+    store.audit(aid, analyst, "approval.re-requested", {"old": old.id, "new": ap.id})
+    store.event(aid, "approval", ap.model_dump())
+    a = store.get("assessment", aid, Assessment)
+    a.status = "awaiting_approval"; store.put("assessment", a)
     return ap
 
 

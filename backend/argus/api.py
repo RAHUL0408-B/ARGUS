@@ -18,7 +18,9 @@ FRONTEND = config.ROOT / "frontend"
 
 
 def lab_scope() -> Scope:
-    return Scope(id="scope-lab", name="ARGUS local Docker lab", targets=["10.77.0.0/24"], exclusions=["10.77.0.2", "10.77.0.3"],
+    # .1 is the Docker gateway = the developer's own machine and everything it publishes: it is NOT part of the lab.
+    # .2 / .3 are the ARGUS tools and ZAP containers. Only .10 (DVWA) and .11 (Juice Shop) are test targets.
+    return Scope(id="scope-lab", name="ARGUS local Docker lab", targets=["10.77.0.0/24"], exclusions=["10.77.0.1", "10.77.0.2", "10.77.0.3"],
                  allowed_tools=[], max_intensity="intrusive", authorized_by="Team ARGUS (own isolated lab)", rate_limit_rps=10,
                  notes="Isolated Docker network argus-lab_labnet. Replace with the organizer-provided scope for the live demo.")
 
@@ -146,6 +148,14 @@ def import_sample(aid: str, tool: str):
 def decide(aid: str, ap: str, req: DecideReq):
     try:
         return engine.decide(aid, ap, req.approve, req.analyst, req.comment)
+    except ValueError as ex:
+        raise HTTPException(409, str(ex))
+
+
+@app.post("/api/assessments/{aid}/approvals/{ap}/retry")
+def retry_approval(aid: str, ap: str):
+    try:
+        return engine.request_again(aid, ap)
     except ValueError as ex:
         raise HTTPException(409, str(ex))
 

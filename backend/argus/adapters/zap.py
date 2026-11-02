@@ -34,7 +34,8 @@ class ZapAdapter(Adapter):
     limitations = "Needs the argus-zap daemon. ZAP does not provide CVSS scores; none are fabricated."
 
     def _get(self, path: str, **params):
-        r = httpx.get(f"{config.ZAP_API}{path}", params=params, timeout=30)
+        # ZAP is also a proxy: the special host name 'zap' makes it treat the request as an API call.
+        r = httpx.get(f"{config.ZAP_API}{path}", params=params, timeout=120, headers={"Host": "zap"})
         r.raise_for_status()
         return r.json()
 
@@ -50,9 +51,12 @@ class ZapAdapter(Adapter):
         while time.time() - t0 < timeout:
             if runner.is_cancelled(job.assessment_id):
                 raise InterruptedError("cancelled")
-            if check():
-                return
-            time.sleep(2)
+            try:
+                if check():
+                    return
+            except httpx.TimeoutException:
+                pass   # ZAP's API is slow while an active scan is running; keep polling until our own deadline
+            time.sleep(3)
         raise TimeoutError(f"{label} did not finish within {timeout}s")
 
     def run(self, aid: str, job: Job, url: str, active: bool = False, timeout: int = 240) -> AdapterResult:
@@ -67,7 +71,8 @@ class ZapAdapter(Adapter):
             sid = self._get("/JSON/spider/action/scan/", url=url, recurse="true", maxChildren="60")["scan"]
             self._wait(job, lambda: int(self._get("/JSON/spider/view/status/", scanId=sid)["status"]) >= 100, timeout, "spider")
             if active:
-                asid = self._get("/JSON/ascan/action/scan/", url=url, recurse="true")["scan"]
+                self._get("/JSON/ascan/action/setOptionMaxScanDurationInMins/", Integer="4")   # cap: lab only, keeps demo bounded
+                asid =self._get("/JSON/ascan/action/scan/", url=url, recurse="true")["scan"]
                 self._wait(job, lambda: int(self._get("/JSON/ascan/view/status/", scanId=asid)["status"]) >= 100, timeout * 2, "active scan")
             self._wait(job, lambda: int(self._get("/JSON/pscan/view/recordsToScan/")["recordsToScan"]) == 0, 60, "passive scan")
             alerts = self._get("/JSON/core/view/alerts/", baseurl=url, start="0", count="500").get("alerts", [])
@@ -89,6 +94,6 @@ class ZapAdapter(Adapter):
         ev = runner.new_evidence(aid, "zap", "live", job.id, path, sha, "$.alerts", f"{len(alerts)} alerts, {len(urls)} URLs from {url}")
         res = parse_alerts(aid, alerts, ev.id)
         res.evidence.append(ev)
-        res.notes.append(f"ZAP discovered {len(urls)} URLs")
+        res.notes.append(f"ZAP discovered {len(urls)} URLs" + ("; active scan was capped at 4 minutes, so coverage may be partial" if active else ""))
         runner.finish_ok(job, ev.id)
         return res

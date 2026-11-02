@@ -107,6 +107,9 @@ ISSUE_CLASSES = [
 def classify(title: str, cwe_ids: list[str] | None = None) -> tuple[str, str, str, str]:
     """-> (issue_key, canonical CWE, canonical title, remediation). Falls back to a tool-neutral slug."""
     t = (title or "").lower()
+    if re.search(r"\bdeprecated\b|\breplaced with\b", t) and "header" in t:
+        # informational note about a header that IS present; must not be merged with "header missing" findings
+        return f"info:{re.sub(r'[^a-z0-9]+', '-', t)[:50]}", "", title, ""
     for key, rx, cwe, ctitle, fix in ISSUE_CLASSES:
         if re.search(rx, t):
             return key, cwe, ctitle, fix

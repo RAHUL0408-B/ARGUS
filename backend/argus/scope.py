@@ -55,13 +55,14 @@ def check_target(scope: Scope, target: str, port: Optional[int] = None) -> Decis
     # a CIDR target must be fully contained in an authorized network
     if "/" in host and _is_net(host):
         net = ipaddress.ip_network(host, strict=False)
-        for ex in scope.exclusions:
-            exn = host_of(ex)
-            if _is_net(exn) and ipaddress.ip_network(exn, strict=False).overlaps(net):
-                return Decision(False, f"{host} overlaps excluded range {ex}")
+        # A network target is allowed only if fully inside an authorized network. Overlapping exclusions are not a
+        # conflict: the engine passes them to the scanner (--exclude) so excluded hosts are never touched.
         ok = any(_is_net(host_of(t)) and net.subnet_of(ipaddress.ip_network(host_of(t), strict=False))
                  for t in scope.targets if "/" in host_of(t))
-        return Decision(ok, f"{host} is within authorized scope" if ok else f"{host} is not fully inside the authorized scope {scope.targets}")
+        if not ok:
+            return Decision(False, f"{host} is not fully inside the authorized scope {scope.targets}")
+        excl = [e for e in scope.exclusions if _is_net(host_of(e)) and ipaddress.ip_network(host_of(e), strict=False).overlaps(net)]
+        return Decision(True, f"{host} is within authorized scope" + (f" (exclusions enforced: {', '.join(excl)})" if excl else ""))
     for ex in scope.exclusions:
         if _matches(host, ex):
             return Decision(False, f"{host} is explicitly excluded ({ex})")

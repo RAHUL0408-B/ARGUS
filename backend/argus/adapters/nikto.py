@@ -19,14 +19,16 @@ def parse_json(assessment_id: str, text: str, ev_id: str, base_url: str = "") ->
             continue
         ip = h.get("ip") or h.get("host") or ""
         port = int(h.get("port") or 80)
-        banner = h.get("banner", "")
+        banner = h.get("banner") or h.get("server_banner") or ""
         for v in h.get("vulnerabilities", []) or []:
             msg = v.get("msg", "").strip()
             if not msg:
                 continue
             url = v.get("url", "/")
             asset = Asset(host=ip, port=port, service="http", url=f"http://{ip}:{port}{url}")
-            sev = "low" if any(k in msg.lower() for k in ("x-frame-options", "x-content-type", "strict-transport", "leaks", "outdated", "directory indexing")) else "info"
+            ml = msg.lower()
+            sev = "low" if (any(k in ml for k in ("missing", "not present", "not set", "leaks", "outdated", "directory indexing", "is old"))
+                            and "deprecated" not in ml) else "info"
             res.findings.append(mk_finding(
                 assessment_id, "nikto", "live", ev_id, title=msg[:160], asset=asset, severity=sev, severity_source="derived from nikto message",
                 description=f"Nikto test {v.get('id', '?')} ({v.get('method', 'GET')} {url}): {msg}" + (f" Server banner: {banner}." if banner else ""),

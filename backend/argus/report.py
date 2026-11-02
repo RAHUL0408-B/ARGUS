@@ -74,7 +74,9 @@ def build_pdf(aid: str) -> bytes:
     st = _styles()
     a = store.get("assessment", aid, Assessment)
     fs = store.list_("finding", Finding, aid)
-    active = sorted([f for f in fs if f.status != "refuted"], key=lambda f: f.risk.get("rank", 999))
+    all_active = sorted([f for f in fs if f.status != "refuted"], key=lambda f: f.risk.get("rank", 999))
+    active = [f for f in all_active if f.severity != "info"]       # reported findings
+    info_items = [f for f in all_active if f.severity == "info"]   # informational observations (compact appendix)
     refuted = [f for f in fs if f.status == "refuted"]
     evs = store.list_("evidence", Evidence, aid)
     jobs = [j for j in store.list_("job", Job, aid) if j.kind not in ("read", "cleanup")]
@@ -113,8 +115,8 @@ def build_pdf(aid: str) -> bytes:
     story += [_p("1. Executive Summary", st["h1"])]
     hosts = sorted({f.asset.host for f in active})
     story.append(_p(f"ARGUS assessed {len(a.targets)} authorized target(s) ({_e(', '.join(a.targets))}) and identified <b>{len(active)}</b> distinct finding(s) "
-                    f"across {len(hosts)} host(s). {len(refuted)} additional tool alert(s) were investigated and <b>refuted as false positives</b>; they are listed in Appendix B and excluded from the risk ranking. "
-                    f"{len(validated)} finding(s) were independently validated, and {len([f for f in active if f.status == 'corroborated'])} were corroborated by more than one tool.", st["b"]))
+                    f"across {len(hosts)} host(s), plus {len(info_items)} informational observation(s) (Appendix E). {len(refuted)} additional tool alert(s) were investigated and <b>refuted as false positives</b>; they are listed in Appendix B and excluded from the risk ranking. "
+                    f"{len(validated)} finding(s) were independently validated, and {len([f for f in active if len({o.tool for o in f.occurrences}) >= 2])} were reported independently by more than one tool.", st["b"]))
     if active:
         top = active[:3]
         story.append(_p("<b>Highest-priority issues</b> (ranked by a transparent score, see section 3): " +
@@ -226,6 +228,11 @@ def build_pdf(aid: str) -> bytes:
         chosen_opts = [o for o in c.options if o.get("decision", "").startswith("CHOSEN")]
         story.append(KeepTogether([_p(f"<b>{c.id}</b> [{_e(c.phase)}] planner: {_e(c.planner)} &middot; chose: {_e(', '.join(c.chosen))}", st["s"]),
                                    _p(f"Reasoning: {_e(c.rationale)}<br/>Scope check: {_e(c.scope_check)}<br/>Outcome: {_e(c.outcome or 'pending')}", st["s"]), Spacer(1, 4)]))
+    story += [PageBreak(), _p("Appendix E. Informational observations", st["h1"]),
+              _p("Items reported by tools at informational level. They are context, not vulnerabilities, and are not ranked.", st["s"])]
+    story.append(_tbl([["ID", "Observation", "Asset", "Source", "Evidence"]] +
+                      [[f.id, _e(f.title[:90]), _e(f.asset.key()), _e(", ".join(sorted({o.tool for o in f.occurrences}))), _e(", ".join(f.evidence_ids[:2]))] for f in info_items],
+                      [12 * mm, 84 * mm, 26 * mm, 24 * mm, 24 * mm], st) if info_items else _p("None.", st["s"]))
     story += [PageBreak(), _p("Appendix D. Audit trail (hash-chained)", st["h1"]),
               _p(f"Chain verification: {'INTACT' if ok_chain else 'BROKEN at entry ' + str(bad)}.", st["s"])]
     story.append(_tbl([["#", "Time (UTC)", "Actor", "Action", "Hash"]] + [[str(r["seq"]), r["ts"][:19], _e(r["actor"]), _e(r["action"]), r["hash"][:14]] for r in audit],

@@ -19,7 +19,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 LLM_MODEL = os.getenv("ARGUS_LLM_MODEL", "claude-sonnet-5-5")
 
 DEFAULT_TIMEOUT = int(os.getenv("ARGUS_TOOL_TIMEOUT", "300"))
-MAX_AGENT_STEPS = int(os.getenv("ARGUS_MAX_STEPS", "14"))
+MAX_AGENT_STEPS = int(os.getenv("ARGUS_MAX_STEPS", "24"))
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)

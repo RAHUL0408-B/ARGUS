@@ -24,7 +24,8 @@ def test_exclusion_overrides_target():
 
 
 def test_cidr_must_be_fully_inside_scope():
-    assert check_target(LAB, "10.77.0.0/28").allowed is False  # overlaps excluded .2
+    d = check_target(LAB, "10.77.0.0/28")           # overlaps excluded .2: allowed, exclusions are enforced at scan time
+    assert d.allowed and "exclusions enforced" in d.reason
     assert not check_target(LAB, "10.77.0.0/16").allowed
     assert not check_target(LAB, "10.0.0.0/8").allowed
 

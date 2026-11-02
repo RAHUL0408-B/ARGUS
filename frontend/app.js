@@ -6,7 +6,7 @@ const api = async (p, opt) => {
   if (!r.ok) { let m = r.statusText; try { m = (await r.json()).detail || m; } catch (e) {} throw new Error(m); }
   return r.json();
 };
-let cur = null, state = null, es = null, lastSeq = 0, events = [], chat = [];
+let hideInfo = true, cur = null, state = null, es = null, lastSeq = 0, events = [], chat = [];
 const sev = s => `<span class="tag sev-${esc(s)}">${esc(String(s).toUpperCase())}</span>`;
 const mode = m => `<span class="mode ${m === "live" ? "live" : "imp"}">${m === "live" ? "LIVE" : "IMPORT"}</span>`;
 const st = s => `<span class="st ${esc(s)}">${esc(s)}</span>`;
@@ -95,13 +95,15 @@ function renderTimeline() {
 }
 
 function renderFindings() {
-  const fs = state.findings;
-  let h = `<div class="card small">Import results from other tools (IMPORT only, not executed by ARGUS): ${["nessus", "burp", "openvas"].map(t => `<button class="sm" onclick="impSample('${t}')">sample ${t}</button>`).join(" ")}
+  const fs = state.findings.filter(f => !(hideInfo && f.severity === "info" && f.status !== "refuted"));
+  const nInfo = state.findings.filter(f => f.severity === "info" && f.status !== "refuted").length;
+  let h = `<div class="card small"><label><input type="checkbox" id="hideInfo" ${hideInfo ? "checked" : ""}> Hide ${nInfo} informational observation(s)</label></div><div class="card small">Import results from other tools (IMPORT only, not executed by ARGUS): ${["nessus", "burp", "openvas"].map(t => `<button class="sm" onclick="impSample('${t}')">sample ${t}</button>`).join(" ")}
   <input type="file" id="fileIn"> <select id="fileTool"><option>nessus</option><option>burp</option><option>openvas</option></select> <button class="sm" id="fileGo">Import file</button></div>`;
   h += `<table><tr><th>#</th><th>ID</th><th>Finding</th><th>Asset</th><th>Sev</th><th>Priority</th><th>Status</th><th>Conf</th><th>Sources</th></tr>`;
   h += fs.map(f => `<tr class="click" data-f="${esc(f.id)}"><td>${esc(f.risk.rank ?? "-")}</td><td>${esc(f.id)}</td><td>${esc(f.title.slice(0, 70))}</td><td>${esc(f.asset.host + ":" + (f.asset.port || "-"))}</td><td>${sev(f.status === "refuted" ? "refuted" : f.severity)}</td><td>${esc(f.risk.priority ?? "-")}</td><td>${st(f.status)}</td><td>${f.confidence}</td><td class="small">${[...new Set(f.occurrences.map(o => o.tool + (o.mode === "import" ? "*" : "")))].join(", ")}</td></tr>`).join("") || '<tr><td colspan="9" class="muted">No findings yet.</td></tr>';
   h += `</table><div class="small muted">* = imported file, not executed by ARGUS. Refuted rows are false positives kept for transparency.</div><div id="detail"></div>`;
   $("#t-findings").innerHTML = h;
+  $("#hideInfo").onchange = e => { hideInfo = e.target.checked; renderFindings(); };
   document.querySelectorAll("#t-findings tr.click").forEach(r => r.onclick = () => detail(r.dataset.f));
   $("#fileGo").onclick = async () => {
     const f = $("#fileIn").files[0]; if (!f) return alert("choose a file");
@@ -133,9 +135,10 @@ function renderApprovals() {
   h += ap.map(x => `<div class="card"><h4>${esc(x.id)} - ${esc(x.action.action_id)} ${st(x.status)}</h4><div class="small"><b>Tool:</b> ${esc(x.action.tool)} &middot; <b>Intensity:</b> ${esc(x.action.intensity)} &middot; <b>Target:</b> ${esc(x.action.target)} ${x.action.params && x.action.params.module ? "&middot; <b>Module:</b> " + esc(x.action.params.module) : ""}</div>
    <div class="small"><b>Why the agent wants this:</b> ${esc(x.reason)}</div>
    ${x.status === "pending" ? `<div class="row"><input id="an-${esc(x.id)}" placeholder="Your name" value="analyst"> <input id="cm-${esc(x.id)}" placeholder="Comment" size="30"> <button class="good sm" onclick="decide('${esc(x.id)}',true)">Approve</button> <button class="danger sm" onclick="decide('${esc(x.id)}',false)">Reject</button></div>` :
-   `<div class="small"><b>Decision:</b> ${esc(x.status)} by ${esc(x.decided_by || "-")} at ${esc((x.decided_at || "").slice(0, 19))} ${x.comment ? "- " + esc(x.comment) : ""}<br><b>Outcome:</b> ${esc(x.outcome || "-")}</div>`}</div>`).join("") || '<div class="muted">No approvals requested yet.</div>';
+   (x.status === "failed" ? `<div class="row"><button class="sm" onclick="retryAp('${esc(x.id)}')">Request approval again</button></div>` : "") + `<div class="small"><b>Decision:</b> ${esc(x.status)} by ${esc(x.decided_by || "-")} at ${esc((x.decided_at || "").slice(0, 19))} ${x.comment ? "- " + esc(x.comment) : ""}<br><b>Outcome:</b> ${esc(x.outcome || "-")}</div>`}</div>`).join("") || '<div class="muted">No approvals requested yet.</div>';
   $("#t-approvals").innerHTML = h;
 }
+window.retryAp = async id => { try { await api(`/assessments/${cur}/approvals/${id}/retry`, {}); refresh(); } catch (e) { alert(e.message); } };
 window.decide = async (id, ok) => { try { await api(`/assessments/${cur}/approvals/${id}/decide`, { approve: ok, analyst: $("#an-" + id).value, comment: $("#cm-" + id).value }); refresh(); } catch (e) { alert(e.message); } };
 
 function renderCopilot() {
