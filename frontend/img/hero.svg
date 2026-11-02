@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300" role="img" aria-label="A shield with an eye watching a network of servers">
+<defs>
+<radialGradient id="g" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#22d3ee" stop-opacity=".35"/><stop offset="1" stop-color="#0b1220" stop-opacity="0"/></radialGradient>
+<linearGradient id="sh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
+</defs>
+<rect width="520" height="300" fill="none"/>
+<circle cx="260" cy="150" r="140" fill="url(#g)"/>
+<g stroke="#334155" stroke-width="1.5" fill="none" stroke-dasharray="4 4">
+<path d="M260 150 L90 70"/><path d="M260 150 L100 230"/><path d="M260 150 L430 60"/><path d="M260 150 L440 235"/><path d="M260 150 L260 28"/>
+</g>
+<g fill="#0f1b2d" stroke="#38bdf8" stroke-width="1.5">
+<rect x="62" y="50" width="56" height="40" rx="7"/><rect x="72" y="212" width="56" height="40" rx="7"/>
+<rect x="402" y="40" width="56" height="40" rx="7"/><rect x="412" y="215" width="56" height="40" rx="7"/><rect x="232" y="6" width="56" height="40" rx="7"/>
+</g>
+<g fill="#38bdf8"><circle cx="74" cy="62" r="3"/><circle cx="84" cy="62" r="3" fill="#4ade80"/><circle cx="84" cy="224" r="3" fill="#f87171"/><circle cx="74" cy="224" r="3"/>
+<circle cx="414" cy="52" r="3" fill="#fbbf24"/><circle cx="424" cy="52" r="3"/><circle cx="424" cy="227" r="3"/><circle cx="244" cy="18" r="3" fill="#4ade80"/></g>
+<g stroke="#1e3a5f" stroke-width="2"><path d="M70 74h40M70 82h26"/><path d="M80 236h40M80 244h26"/><path d="M410 64h40M410 72h26"/><path d="M420 239h40M420 247h26"/><path d="M240 30h40M240 38h26"/></g>
+<path d="M260 82 L328 106 V158 C328 200 296 226 260 240 C224 226 192 200 192 158 V106 Z" fill="url(#sh)" opacity=".95"/>
+<path d="M260 96 L316 116 V158 C316 192 290 214 260 226 C230 214 204 192 204 158 V116 Z" fill="#0b1220" opacity=".55"/>
+<path d="M222 160 C238 138 282 138 298 160 C282 182 238 182 222 160 Z" fill="#e0f2fe"/>
+<circle cx="260" cy="160" r="15" fill="#0ea5e9"/><circle cx="260" cy="160" r="7" fill="#0b1220"/><circle cx="265" cy="155" r="3" fill="#fff"/>
+</svg>

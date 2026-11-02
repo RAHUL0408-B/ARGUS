@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 150" role="img" aria-label="ARGUS workflow: scope, plan, scan, correlate, approve, report">
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#38bdf8"/></marker></defs>
+<g font-family="Segoe UI,system-ui,sans-serif" text-anchor="middle">
+<g fill="#0f1b2d" stroke="#38bdf8" stroke-width="2">
+<circle cx="70" cy="60" r="38"/><circle cx="224" cy="60" r="38"/><circle cx="378" cy="60" r="38"/><circle cx="532" cy="60" r="38"/><circle cx="686" cy="60" r="38"/><circle cx="840" cy="60" r="38"/>
+</g>
+<g stroke="#38bdf8" stroke-width="2.5" marker-end="url(#a)"><path d="M110 60h66"/><path d="M264 60h66"/><path d="M418 60h66"/><path d="M572 60h66"/><path d="M726 60h66"/></g>
+<g fill="none" stroke="#e0f2fe" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+<path d="M70 42l16 6v12c0 10-8 17-16 20-8-3-16-10-16-20V48z"/>
+<path d="M206 46h36M206 60h36M206 74h22"/>
+<circle cx="374" cy="56" r="13"/><path d="M384 66l12 12"/>
+<path d="M514 70l12-22 10 14 10-8 8 16"/>
+<path d="M670 62l10 10 20-24"/>
+<path d="M826 44h28v32h-28z"/><path d="M832 54h16M832 62h16M832 70h10"/>
+</g>
+<g fill="#e2e8f0" font-size="15" font-weight="600">
+<text x="70" y="124">1 Scope</text><text x="224" y="124">2 Plan</text><text x="378" y="124">3 Scan</text><text x="532" y="124">4 Correlate</text><text x="686" y="124">5 Approve</text><text x="840" y="124">6 Report</text>
+</g>
+<g fill="#94a3b8" font-size="11">
+<text x="70" y="141">only allowed targets</text><text x="224" y="141">you approve it</text><text x="378" y="141">real tools run</text><text x="532" y="141">merge, remove noise</text><text x="686" y="141">risky = human OK</text><text x="840" y="141">PDF + audit log</text>
+</g></g>
+</svg>

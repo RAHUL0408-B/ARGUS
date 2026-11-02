@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" role="img" aria-label="A hand-held stop sign: a human must approve risky actions">
+<circle cx="100" cy="64" r="48" fill="#0f1b2d" stroke="#fbbf24" stroke-width="4"/>
+<path d="M100 36v34" stroke="#fbbf24" stroke-width="9" stroke-linecap="round"/><circle cx="100" cy="88" r="5.5" fill="#fbbf24"/>
+<path d="M60 128c10-14 24-18 40-18s30 4 40 18" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round"/>
+</svg>

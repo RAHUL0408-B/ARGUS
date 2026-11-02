@@ -4,50 +4,58 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ARGUS - AI VAPT Agent</title>
+<link rel="icon" href="/img/hero.svg">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <header>
-  <div class="brand"><span class="logo">A</span><div><b>ARGUS</b><small>Adaptive, evidence-grounded VAPT agent</small></div></div>
+  <div class="brand" id="home" title="Back to start"><img src="/img/hero.svg" alt="" class="logo"><div><b>ARGUS</b><small>AI security-testing agent &middot; lab only &middot; human-approved</small></div></div>
   <div class="badges" id="badges"></div>
+  <button class="ghost sm" id="btnHelp">? How it works</button>
 </header>
 <div class="layout">
   <aside>
-    <h3>New assessment</h3>
-    <textarea id="req" rows="5">Assess the lab network 10.77.0.0/24, focus on web applications. Passive and standard checks first; no denial of service.</textarea>
-    <div class="row">
-      <button class="primary" id="btnPlan">Validate scope &amp; plan</button>
-    </div>
-    <div class="row">
-      <button class="ghost" id="btnOos" title="Demonstrates scope enforcement. No traffic is sent to the public address.">Demo: out-of-scope request</button>
-    </div>
-    <details open><summary>Registered scope</summary><pre id="scopeBox" class="mini"></pre></details>
-    <h3>Assessments</h3>
+    <h3>1 &middot; What should ARGUS test?</h3>
+    <textarea id="req" rows="5" aria-label="Describe the test in plain English"></textarea>
+    <div class="presets" id="presets"></div>
+    <div class="row"><button class="primary" id="btnPlan">Check scope &amp; make a plan</button></div>
+    <div class="hint">Nothing is scanned yet. ARGUS first checks every target against the allowed scope and shows you a plan to approve.</div>
+    <div class="row"><button class="ghost" id="btnOos" title="No traffic is sent to the public address.">Safety demo: ask for an out-of-scope target</button></div>
+    <details><summary>Allowed scope (the safety fence)</summary><div id="scopeBox" class="scopebox"></div></details>
+    <h3>Past assessments</h3>
     <div id="hist"></div>
   </aside>
   <main>
-    <nav id="tabs">
-      <button data-t="plan" class="on">Plan &amp; decisions</button>
-      <button data-t="timeline">Live timeline</button>
-      <button data-t="findings">Findings</button>
-      <button data-t="graph">Attack paths</button>
-      <button data-t="approvals">Approvals <span id="apCount" class="pill hidden">0</span></button>
-      <button data-t="copilot">Copilot</button>
-      <button data-t="report">Report &amp; audit</button>
-      <button data-t="matrix">Integrations</button>
-    </nav>
-    <div id="status" class="statusbar"></div>
-    <section id="t-plan" class="tab"></section>
-    <section id="t-timeline" class="tab hidden"></section>
-    <section id="t-findings" class="tab hidden"></section>
-    <section id="t-graph" class="tab hidden"></section>
-    <section id="t-approvals" class="tab hidden"></section>
-    <section id="t-copilot" class="tab hidden"></section>
-    <section id="t-report" class="tab hidden"></section>
-    <section id="t-matrix" class="tab hidden"></section>
+    <section id="welcome"></section>
+    <section id="workspace" class="hidden">
+      <div id="status" class="statusbar"></div>
+      <div id="stepper" class="stepper"></div>
+      <div id="next" class="next"></div>
+      <nav id="tabs">
+        <button data-t="overview" class="on">Overview</button>
+        <button data-t="plan">Plan &amp; reasoning</button>
+        <button data-t="timeline">Live activity</button>
+        <button data-t="findings">Findings</button>
+        <button data-t="graph">Attack paths</button>
+        <button data-t="approvals">Approvals <span id="apCount" class="pill hidden">0</span></button>
+        <button data-t="copilot">Ask ARGUS</button>
+        <button data-t="report">Report &amp; audit</button>
+        <button data-t="matrix">Tools</button>
+      </nav>
+      <section id="t-overview" class="tab"></section>
+      <section id="t-plan" class="tab hidden"></section>
+      <section id="t-timeline" class="tab hidden"></section>
+      <section id="t-findings" class="tab hidden"></section>
+      <section id="t-graph" class="tab hidden"></section>
+      <section id="t-approvals" class="tab hidden"></section>
+      <section id="t-copilot" class="tab hidden"></section>
+      <section id="t-report" class="tab hidden"></section>
+      <section id="t-matrix" class="tab hidden"></section>
+    </section>
   </main>
 </div>
-<div id="modal" class="modal hidden"><div class="mbox"><div class="mhead"><b id="mtitle"></b><button class="ghost" id="mclose">Close</button></div><pre id="mbody"></pre></div></div>
+<div id="modal" class="modal hidden"><div class="mbox"><div class="mhead"><b id="mtitle"></b><button class="ghost sm" id="mclose">Close</button></div><div id="mhtml" class="mhtml hidden"></div><pre id="mbody"></pre></div></div>
+<div id="toast" class="toast hidden"></div>
 <script src="/app.js"></script>
 </body>
 </html>
