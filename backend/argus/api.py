@@ -160,6 +160,16 @@ def retry_approval(aid: str, ap: str):
         raise HTTPException(409, str(ex))
 
 
+@app.post("/api/assessments/{aid}/findings/{fid}/propose-validation")
+def propose_validation(aid: str, fid: str, body: dict):
+    try:
+        return engine.propose_validation(aid, fid, body.get("module", "auxiliary/scanner/http/http_version"), body.get("analyst", "analyst"))
+    except scopemod.ScopeViolation as ex:
+        raise HTTPException(403, str(ex))
+    except ValueError as ex:
+        raise HTTPException(400, str(ex))
+
+
 @app.post("/api/assessments/{aid}/findings/{fid}/retest")
 def retest(aid: str, fid: str):
     try:

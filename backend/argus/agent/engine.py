@@ -289,7 +289,7 @@ def _msf(aid: str, job: Job, c: Candidate) -> AdapterResult:
     res = ADAPTERS["metasploit"].run(aid, job, c.params["module"], c.target, c.port or 80)
     ev = res.evidence[0]
     text = (config.DATA_DIR / ev.file_path).read_text(errors="replace")
-    ver = f.asset.version
+    ver = f.asset.version or next((x.version for x in _assets(aid) if x.host == f.asset.host and x.port == f.asset.port and x.version), "")
     if ver and ver in text:
         correlation.apply_validation(f, "confirmed", f"read-only module re-read version '{ver}' from the live service", ev.id, "metasploit-aux")
     else:
@@ -433,6 +433,27 @@ def decide(aid: str, approval_id: str, approve: bool, analyst: str, comment: str
         ap.outcome = "rejected by analyst; not executed"
         store.put("approval", ap)
         _after_approval(aid)
+    return ap
+
+
+def propose_validation(aid: str, finding_id: str, module: str, analyst: str = "analyst") -> Approval:
+    """Analyst-initiated validation request. Still goes through the approval gate; module must be on the allow-list."""
+    from ..adapters.msf import ALLOWED_MODULES
+    if module not in ALLOWED_MODULES:
+        raise ValueError(f"module not allowed. Allowed read-only modules: {', '.join(ALLOWED_MODULES)}")
+    f = store.get("finding", finding_id, Finding, aid)
+    if not f or not f.asset.port:
+        raise ValueError("finding not found or has no network service to validate")
+    a = store.get("assessment", aid, Assessment)
+    c = Candidate(action_id=f"msf_check:{f.id}:{module.split('/')[-1]}", tool="metasploit", kind="msf_check", target=f.asset.host, port=f.asset.port,
+                  intensity="exploit", cost="medium", noise="low", params={"finding_id": f.id, "module": module},
+                  why=f"Analyst {analyst} requested read-only module {module} against {f.asset.key()} to corroborate {f.id}.")
+    scopemod.enforce(a.scope, "metasploit", c.target, "exploit", c.port)   # scope still applies; raises if not allowed
+    ap = Approval(id=f"AP-{store.count('approval', aid) + 1:03d}", assessment_id=aid, action=c.model_dump(), reason=c.why, finding_id=f.id)
+    store.put("approval", ap)
+    store.audit(aid, analyst, "approval.requested", {"id": ap.id, "action": c.action_id, "initiated_by": "analyst"})
+    store.event(aid, "approval", ap.model_dump())
+    a.status = "awaiting_approval"; store.put("assessment", a)
     return ap
 
 

@@ -153,3 +153,19 @@ def test_http_validators():
     assert evaluate("server-disclosure", "http://x/", raw).verdict == "confirmed"
     assert evaluate("cookie-httponly", "http://x/", raw).verdict == "confirmed"
     assert evaluate("xss", "http://x/", raw).verdict == "inconclusive"
+
+
+def test_validated_confidence_survives_rescoring_and_synonyms_merge():
+    for i in range(1, 4):
+        ev(i)
+    z = zap.parse_alerts(AID, [{"pluginId": "10033", "alert": "Directory Browsing", "risk": "Medium", "confidence": "Medium",
+                               "url": "http://10.77.0.10/dvwa/css/", "cweid": "548", "description": "d", "solution": "s"}], "EV-0001").findings
+    correlation.ingest(AID, z)
+    f = store.list_("finding", Finding, AID)[0]
+    correlation.apply_validation(f, "confirmed", "index page seen", "EV-0002", "argus-http-check")
+    store.put("finding", f)
+    ne = imports.parse_nessus(AID, (SAMPLES / "sample_nessus_dvwa.nessus").read_text(), "EV-0003").findings
+    correlation.ingest(AID, [x for x in ne if "Browsable" in x.title])   # synonym from another tool, different URL
+    fs = [x for x in store.list_("finding", Finding, AID) if x.issue_key == "directory-listing"]
+    assert len(fs) == 1 and {o.tool for o in fs[0].occurrences} == {"zap", "nessus"}
+    assert fs[0].status == "validated" and fs[0].confidence >= 90

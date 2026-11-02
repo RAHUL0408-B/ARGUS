@@ -84,7 +84,7 @@ ISSUE_CLASSES = [
     ("server-disclosure", r"server (leaks|header|version)|x-powered-by|server banner|server software|version information disclos",
      "CWE-200", "Server version disclosure",
      "Suppress or genericise the Server and X-Powered-By response headers."),
-    ("directory-listing", r"directory (listing|indexing)|index of /", "CWE-548", "Directory listing enabled",
+    ("directory-listing", r"directory (listing|indexing|browsing)|browsable (web )?director|index of /", "CWE-548", "Directory listing enabled",
      "Disable automatic directory indexing (e.g. 'Options -Indexes' in Apache)."),
     ("outdated-software", r"outdated|out of date|end of life|eol|is old|appears to be outdated", "CWE-1104",
      "Outdated server software", "Upgrade to a currently supported release and apply vendor security updates."),

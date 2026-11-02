@@ -124,9 +124,10 @@ function detail(id) {
     ${fac.base !== undefined ? `<div class="small"><b>Priority ${esc(r.priority)}</b> = base ${esc(fac.base)} (${esc(fac.base_source)}) x exploit ${esc(fac.exploitability)} (${esc(fac.exploitability_source)}) x conf ${esc(fac.confidence_weight)}${fac.path_bonus ? " + path bonus " + fac.path_bonus : ""}</div>` : `<div class="small">${esc(r.reason || "")}</div>`}
     ${f.validation && f.validation.verdict ? `<div class="small"><b>Validation:</b> ${esc(f.validation.verdict)} by ${esc(f.validation.by)} - ${esc(f.validation.reason)}</div>` : ""}
     <div class="small"><b>Remediation:</b> ${esc(f.remediation || "n/a")}</div></div></div>
-  <div class="row"><button class="sm" onclick="retest('${esc(f.id)}')">Retest this finding</button></div></div>`;
+  <div class="row"><button class="sm" onclick="retest('${esc(f.id)}')">Retest this finding</button> <button class="sm" onclick="proposeVal('${esc(f.id)}')">Request Metasploit validation (needs approval)</button></div></div>`;
   $("#detail").scrollIntoView({ behavior: "smooth" });
 }
+window.proposeVal = async id => { try { const r = await api(`/assessments/${cur}/findings/${id}/propose-validation`, { module: 'auxiliary/scanner/http/http_version' }); alert('Approval ' + r.id + ' requested. Open the Approvals tab to decide.'); refresh(); tab('approvals'); } catch (e) { alert(e.message); } };
 window.retest = async id => { try { const r = await api(`/assessments/${cur}/findings/${id}/retest`, {}); alert(`${r.finding}: ${r.before} -> ${r.after}\n${r.reason}`); refresh(); } catch (e) { alert(e.message); } };
 
 function renderApprovals() {

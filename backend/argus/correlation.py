@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from . import reference, store
 from .models import Finding, Occurrence
 
-PER_URL = {"xss", "sqli", "path-traversal", "directory-listing", "csrf", "info-disclosure-file", "default-credentials"}
+PER_URL = {"xss", "sqli", "path-traversal", "csrf", "info-disclosure-file", "default-credentials"}
 
 
 def normalize(f: Finding) -> Finding:
@@ -93,6 +93,10 @@ def score_confidence(f: Finding) -> Finding:
         pts -= 30; reasons.append("-30 distribution package: the vendor may have back-ported the fix")
     f.confidence_reasons = reasons + keep
     f.confidence = max(0, min(100, pts))
+    if f.status == "validated":
+        f.confidence = max(f.confidence, 90)      # an independent confirmation is never lowered by re-scoring
+    elif f.status == "refuted":
+        f.confidence = min(f.confidence, 10)
     if f.status not in ("validated", "refuted", "fixed"):
         f.status = "corroborated" if len(tools) >= 2 else ("suspected" if version_only else "observed")
     return f
