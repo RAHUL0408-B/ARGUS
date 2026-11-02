@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARGUS - AI VAPT Agent</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">A</span><div><b>ARGUS</b><small>Adaptive, evidence-grounded VAPT agent</small></div></div>
+  <div class="badges" id="badges"></div>
+</header>
+<div class="layout">
+  <aside>
+    <h3>New assessment</h3>
+    <textarea id="req" rows="5">Assess the lab network 10.77.0.0/24, focus on web applications. Passive and standard checks first; no denial of service.</textarea>
+    <div class="row">
+      <button class="primary" id="btnPlan">Validate scope &amp; plan</button>
+    </div>
+    <div class="row">
+      <button class="ghost" id="btnOos" title="Demonstrates scope enforcement. No traffic is sent to the public address.">Demo: out-of-scope request</button>
+    </div>
+    <details open><summary>Registered scope</summary><pre id="scopeBox" class="mini"></pre></details>
+    <h3>Assessments</h3>
+    <div id="hist"></div>
+  </aside>
+  <main>
+    <nav id="tabs">
+      <button data-t="plan" class="on">Plan &amp; decisions</button>
+      <button data-t="timeline">Live timeline</button>
+      <button data-t="findings">Findings</button>
+      <button data-t="graph">Attack paths</button>
+      <button data-t="approvals">Approvals <span id="apCount" class="pill hidden">0</span></button>
+      <button data-t="copilot">Copilot</button>
+      <button data-t="report">Report &amp; audit</button>
+      <button data-t="matrix">Integrations</button>
+    </nav>
+    <div id="status" class="statusbar"></div>
+    <section id="t-plan" class="tab"></section>
+    <section id="t-timeline" class="tab hidden"></section>
+    <section id="t-findings" class="tab hidden"></section>
+    <section id="t-graph" class="tab hidden"></section>
+    <section id="t-approvals" class="tab hidden"></section>
+    <section id="t-copilot" class="tab hidden"></section>
+    <section id="t-report" class="tab hidden"></section>
+    <section id="t-matrix" class="tab hidden"></section>
+  </main>
+</div>
+<div id="modal" class="modal hidden"><div class="mbox"><div class="mhead"><b id="mtitle"></b><button class="ghost" id="mclose">Close</button></div><pre id="mbody"></pre></div></div>
+<script src="/app.js"></script>
+</body>
+</html>

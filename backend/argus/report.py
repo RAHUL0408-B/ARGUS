@@ -1,0 +1,244 @@
+"""Client-ready VAPT PDF report (brief section 7). All text is generated from stored data; statements cite evidence ids.
+
+Observed evidence (tool output) and analysis (rule/AI inference) are visibly separated.
+"""
+from __future__ import annotations
+import io
+from xml.sax.saxutils import escape
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import (BaseDocTemplate, Frame, KeepTogether, NextPageTemplate, PageBreak, PageTemplate, Paragraph, Spacer, Table, TableStyle)
+from reportlab.lib.fonts import addMapping
+from . import config, store
+from .models import Approval, Assessment, DecisionCard, Evidence, Finding, Job
+
+_fonts_ready = False
+SEV_COL = {"critical": "#7B1FA2", "high": "#C62828", "medium": "#EF6C00", "low": "#F9A825", "info": "#546E7A", "refuted": "#78909C"}
+NAVY, ACCENT, LINE = colors.HexColor("#0F2742"), colors.HexColor("#1F6FB2"), colors.HexColor("#C9D3DE")
+
+
+def _fonts():
+    global _fonts_ready
+    if _fonts_ready:
+        return
+    F = "C:/Windows/Fonts/"
+    try:
+        pdfmetrics.registerFont(TTFont("R", F + "segoeui.ttf")); pdfmetrics.registerFont(TTFont("R-B", F + "segoeuib.ttf"))
+        pdfmetrics.registerFont(TTFont("R-I", F + "segoeuii.ttf")); pdfmetrics.registerFont(TTFont("R-BI", F + "segoeuiz.ttf"))
+        pdfmetrics.registerFont(TTFont("M", F + "consola.ttf"))
+        addMapping("R", 0, 0, "R"); addMapping("R", 1, 0, "R-B"); addMapping("R", 0, 1, "R-I"); addMapping("R", 1, 1, "R-BI")
+    except Exception:  # non-Windows fallback to built-ins
+        pdfmetrics.registerFontAlias("R", "Helvetica"); pdfmetrics.registerFontAlias("R-B", "Helvetica-Bold")
+        pdfmetrics.registerFontAlias("R-I", "Helvetica-Oblique"); pdfmetrics.registerFontAlias("R-BI", "Helvetica-BoldOblique")
+        pdfmetrics.registerFontAlias("M", "Courier")
+        addMapping("R", 0, 0, "Helvetica"); addMapping("R", 1, 0, "Helvetica-Bold")
+        addMapping("R", 0, 1, "Helvetica-Oblique"); addMapping("R", 1, 1, "Helvetica-BoldOblique")
+    _fonts_ready = True
+
+
+def _styles():
+    b = ParagraphStyle("b", fontName="R", fontSize=9.6, leading=13.5, spaceAfter=5)
+    return {"b": b,
+            "s": ParagraphStyle("s", parent=b, fontSize=8.4, leading=11.2, spaceAfter=0),
+            "h1": ParagraphStyle("h1", fontName="R-B", fontSize=16, leading=20, textColor=NAVY, spaceBefore=4, spaceAfter=8),
+            "h2": ParagraphStyle("h2", fontName="R-B", fontSize=11.5, leading=15, textColor=ACCENT, spaceBefore=8, spaceAfter=3),
+            "m": ParagraphStyle("m", fontName="M", fontSize=7.6, leading=9.8),
+            "th": ParagraphStyle("th", fontName="R-B", fontSize=8.4, leading=11, textColor=colors.white)}
+
+
+def _p(t, st): return Paragraph(t, st)
+def _e(t): return escape(str(t or ""))
+
+
+def _tbl(rows, widths, st, header=True):
+    data = [[(_p(c, st["th"] if header and i == 0 else st["s"]) if isinstance(c, str) else c) for c in r] for i, r in enumerate(rows)]
+    t = Table(data, colWidths=widths, repeatRows=1 if header else 0)
+    cmds = [("GRID", (0, 0), (-1, -1), 0.4, LINE), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3), ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4)]
+    if header:
+        cmds.append(("BACKGROUND", (0, 0), (-1, 0), NAVY))
+    t.setStyle(TableStyle(cmds))
+    return t
+
+
+def _sev_tag(sev: str) -> str:
+    return f"<font color='{SEV_COL.get(sev, '#000000')}'><b>{sev.upper()}</b></font>"
+
+
+def build_pdf(aid: str) -> bytes:
+    _fonts()
+    st = _styles()
+    a = store.get("assessment", aid, Assessment)
+    fs = store.list_("finding", Finding, aid)
+    active = sorted([f for f in fs if f.status != "refuted"], key=lambda f: f.risk.get("rank", 999))
+    refuted = [f for f in fs if f.status == "refuted"]
+    evs = store.list_("evidence", Evidence, aid)
+    jobs = [j for j in store.list_("job", Job, aid) if j.kind not in ("read", "cleanup")]
+    aps = store.list_("approval", Approval, aid)
+    cards = store.list_("decision", DecisionCard, aid)
+    audit = store.audit_entries(aid)
+    from .adapters import matrix
+    mx = matrix()
+    ok_chain, bad = store.verify_audit()
+    first_ts = audit[0]["ts"] if audit else a.created_at
+    last_ts = audit[-1]["ts"] if audit else a.updated_at
+    has_import = any(e.mode == "import" for e in evs)
+
+    story = []
+    # ---- cover
+    story += [Spacer(1, 40 * mm), _p("VULNERABILITY ASSESSMENT &amp; PENETRATION TEST REPORT", ParagraphStyle("c0", fontName="R", fontSize=11, textColor=ACCENT)),
+              _p(_e(a.title), ParagraphStyle("c1", fontName="R-B", fontSize=26, leading=30, textColor=NAVY, spaceAfter=6)),
+              _p(f"Generated by ARGUS (AI-assisted, evidence-grounded) &middot; assessment {a.id}", st["b"]), Spacer(1, 8 * mm),
+              _tbl([["Authorized scope", _e(", ".join(a.scope.targets))], ["Exclusions", _e(", ".join(a.scope.exclusions) or "none")],
+                    ["Authorized by", _e(a.scope.authorized_by or "not recorded")], ["Assessment window", f"{_e(first_ts)} to {_e(last_ts)} (UTC)"],
+                    ["Report status", f"{_e(a.status)}; audit chain {'verified intact' if ok_chain else 'FAILED verification at entry ' + str(bad)}"]],
+                   [45 * mm, 125 * mm], st, header=False),
+              Spacer(1, 6 * mm),
+              _p("<b>Important.</b> This report was produced by an automated assistant from real tool output. Findings marked <i>suspected</i> or "
+                 "<i>observed</i> have not been manually verified. Use of the standards named here (NIST SP 800-115, OWASP Top 10, CVE, CVSS, CWE, MITRE ATT&amp;CK, "
+                 "NIST CSF 2.0) is indicative and does not establish formal compliance.", st["s"]), PageBreak()]
+
+    # ---- 7.1 executive summary
+    sev_count = {}
+    for f in active:
+        sev_count[f.severity] = sev_count.get(f.severity, 0) + 1
+    band_count = {}
+    for f in active:
+        band_count[f.risk.get("band", f.severity)] = band_count.get(f.risk.get("band", f.severity), 0) + 1
+    validated = [f for f in active if f.status == "validated"]
+    story += [_p("1. Executive Summary", st["h1"])]
+    hosts = sorted({f.asset.host for f in active})
+    story.append(_p(f"ARGUS assessed {len(a.targets)} authorized target(s) ({_e(', '.join(a.targets))}) and identified <b>{len(active)}</b> distinct finding(s) "
+                    f"across {len(hosts)} host(s). {len(refuted)} additional tool alert(s) were investigated and <b>refuted as false positives</b>; they are listed in Appendix B and excluded from the risk ranking. "
+                    f"{len(validated)} finding(s) were independently validated, and {len([f for f in active if f.status == 'corroborated'])} were corroborated by more than one tool.", st["b"]))
+    if active:
+        top = active[:3]
+        story.append(_p("<b>Highest-priority issues</b> (ranked by a transparent score, see section 3): " +
+                        "; ".join(f"<b>{f.id}</b> {_e(f.title[:70])} on {_e(f.asset.key())} (priority {f.risk.get('priority')}, {f.status}) " +
+                                  " ".join(f"[{e}]" for e in f.evidence_ids[:2]) for f in top) + ".", st["b"]))
+    story.append(_p("<b>Overall assessment.</b> " + (
+        "Significant weaknesses were found that warrant prompt remediation." if any(f.severity in ("high", "critical") for f in active) else
+        "No high or critical issues were confirmed by the tools used; the findings are predominantly hardening and configuration weaknesses. This is not a guarantee of security: see Assessment Limitations."), st["b"]))
+    story.append(_p("<b>Scope and rules of engagement.</b> All testing was restricted to the authorized lab scope above. Active or intrusive actions required recorded human approval (section 6).", st["b"]))
+
+    # ---- 7.2 methodology
+    story += [_p("2. Assessment Methodology", st["h1"]),
+              _p("The assessment followed the planning, discovery, attack (validation) and reporting phases of NIST SP 800-115. The agent selected each next action from its current evidence "
+                 "(Decision Cards, Appendix C) rather than a fixed script. Every action passed a deterministic scope check and was written to a hash-chained audit log.", st["b"]),
+              _p("Assets tested", st["h2"])]
+    assets = sorted({(f.asset.host, f.asset.port, f.asset.service) for f in fs})
+    story.append(_p(", ".join(f"{_e(h)}:{p or '-'} ({_e(s or 'n/a')})" for h, p, s in assets) or "No assets with findings.", st["s"]))
+    story.append(_p("Tool execution summary", st["h2"]))
+    rows = [["Job", "Tool", "Mode", "Target", "Status", "Started", "Detail"]]
+    for j in jobs:
+        rows.append([j.id, j.tool, "LIVE" if j.mode == "live" else "IMPORT", _e(j.target)[:34], j.status.upper(), _e((j.started_at or "")[11:19]), _e(j.error)[:60]])
+    for e in evs:
+        if e.mode == "import":
+            rows.append(["-", e.tool, "IMPORT", _e(e.excerpt)[:34], "OK", _e(e.captured_at[11:19]), "file imported, not executed"])
+    story.append(_tbl(rows, [13 * mm, 20 * mm, 15 * mm, 46 * mm, 18 * mm, 16 * mm, 42 * mm], st))
+    story.append(_p("Integration status (truthful)", st["h2"]))
+    story.append(_tbl([["Tool", "Status", "Runtime now", "Limitations"]] + [[m["name"], m["status"].upper(), _e(m["runtime"])[:50], _e(m["limitations"])[:140]] for m in mx],
+                      [20 * mm, 22 * mm, 40 * mm, 88 * mm], st))
+
+    # ---- 7.3 severity distribution
+    story += [PageBreak(), _p("3. Severity Distribution and Prioritized Findings", st["h1"])]
+    story.append(_tbl([["Severity (as reported)", "Count"]] + [[_sev_tag(s), str(sev_count.get(s, 0))] for s in ("critical", "high", "medium", "low", "info")], [60 * mm, 25 * mm], st))
+    story.append(_p("<b>How priority is computed:</b> priority = min(10, base &times; exposure &times; exploitability &times; asset criticality &times; confidence weight). "
+                    "Base is the CVSS score reported by a tool; when no tool supplies CVSS, the midpoint of the tool-reported severity is used and labelled as such. "
+                    "No CVSS value in this report was generated by ARGUS. The KEV check uses a small, partial offline snapshot.", st["s"]))
+    story.append(Spacer(1, 3 * mm))
+    rows = [["Rank", "ID", "Finding", "Asset", "Sev.", "Priority", "Status", "Conf."]]
+    for f in active:
+        rows.append([str(f.risk.get("rank", "")), f.id, _e(f.title[:70]), _e(f.asset.key()), _sev_tag(f.severity), str(f.risk.get("priority", "")), f.status, str(f.confidence)])
+    story.append(_tbl(rows, [10 * mm, 12 * mm, 68 * mm, 26 * mm, 16 * mm, 14 * mm, 20 * mm, 10 * mm], st))
+
+    # ---- 7.4 detailed findings
+    story += [PageBreak(), _p("4. Detailed Vulnerability Findings", st["h1"])]
+    for f in active:
+        r, fac = f.risk or {}, (f.risk or {}).get("factors", {})
+        head = _p(f"{f.id} &mdash; {_e(f.title)}", st["h2"])
+        meta = _tbl([
+            ["Affected asset", _e(f.asset.key()) + (f" &middot; {_e(f.asset.product)} {_e(f.asset.version)}" if f.asset.product else "") +
+             (("<br/>URLs: " + _e(", ".join(f.affected_urls[:4]))) if f.affected_urls else "") + (f"<br/>Parameter: {_e(f.asset.parameter)}" if f.asset.parameter else "")],
+            ["Severity / CVSS", f"{_sev_tag(f.severity)} (reported by {_e(f.severity_source)}) &middot; CVSS: " +
+             (f"{f.cvss_score} {_e(f.cvss_vector)} (source: {_e(f.cvss_source)})" if f.cvss_score is not None else "not provided by any tool")],
+            ["CVE / CWE / OWASP", f"{_e(', '.join(f.cve) or 'none reported')} / {_e(', '.join(f.cwe) or 'n/a')} / {_e(f.owasp or 'n/a')}"],
+            ["MITRE ATT&amp;CK (indicative)", _e(", ".join(f.attack) or "n/a")],
+            ["Validation status", f"<b>{f.status.upper()}</b> &middot; confidence {f.confidence}/100" +
+             (f"<br/>Validation: {_e(f.validation.get('verdict'))} by {_e(f.validation.get('by'))} - {_e(f.validation.get('reason'))} [{_e(f.validation.get('evidence_id'))}]" if f.validation else "")],
+            ["Priority", f"{r.get('priority', '-')} (rank {r.get('rank', '-')})" if r else "-"]], [38 * mm, 132 * mm], st, header=False)
+        obs = _p("<b>OBSERVED (tool evidence):</b> " + _e(f.description[:700]) + "<br/>Reported by: " +
+                 ", ".join(f"{_e(o.tool)} ({'LIVE' if o.mode == 'live' else 'IMPORT'}) [{_e(o.evidence_id)}] rule {_e(o.rule_id or 'n/a')}" for o in f.occurrences), st["s"])
+        ana = _p("<b>ANALYSIS (rule-based inference):</b> Confidence reasons: " + _e(" | ".join(f.confidence_reasons) or "n/a") +
+                 ("<br/>Risk factors: " + _e(f"base {fac.get('base')} ({fac.get('base_source')}); exploitability x{fac.get('exploitability')} ({fac.get('exploitability_source')}); confidence weight x{fac.get('confidence_weight')}") if fac else ""), st["s"])
+        story.append(KeepTogether([head, meta, Spacer(1, 2), obs, Spacer(1, 2), ana, Spacer(1, 4)]))
+
+    # ---- 7.5 impact & remediation
+    story += [PageBreak(), _p("5. Impact and Remediation", st["h1"])]
+    rows = [["ID", "Technical / business impact", "Recommended remediation", "References"]]
+    for f in active:
+        impact = {"clickjacking": "Users can be tricked into clicking hidden UI; may enable unwanted actions in an authenticated session.",
+                  "xss": "Attacker script can run in a victim's browser: session theft, defacement, phishing.",
+                  "sqli": "Data theft or modification, potential full database compromise.",
+                  "cookie-httponly": "Script (e.g. via XSS) can read the session cookie, enabling account takeover.",
+                  "directory-listing": "Reveals file structure and potentially sensitive files to anyone."}.get(f.issue_key,
+                  "Increases attack surface or weakens a defensive control; impact depends on how the affected system is used (asset owner to assess).")
+        rows.append([f.id, _e(impact), _e(f.remediation or "See tool guidance; no automated recommendation available."),
+                     _e("; ".join(f.references[:2]) or ", ".join(f.cwe) or "-")])
+    story.append(_tbl(rows, [12 * mm, 58 * mm, 66 * mm, 34 * mm], st))
+
+    # ---- 7.6 limitations
+    story += [_p("6. Assessment Limitations, Assumptions and Human Approvals", st["h1"])]
+    lim = list(a.limitations) + ["Findings are limited to what the integrated tools could observe; absence of a finding is not proof of absence.",
+                                 "Exposure is assumed to be 'reachable over the network without authentication' for all lab assets; asset criticality defaulted to 1.0 unless set by the analyst.",
+                                 "The CISA KEV check uses a small partial offline snapshot; CVE-to-version mapping uses a small reference table."]
+    if has_import:
+        lim.append("Some data was imported from files (marked IMPORT). Imported data was not re-executed by ARGUS; sample import files are synthetic test inputs if so named.")
+    for l in lim:
+        story.append(_p("&bull; " + _e(l), st["s"]))
+    story.append(_p("Human approvals (active validation)", st["h2"]))
+    if aps:
+        story.append(_tbl([["ID", "Action", "Status", "Decided by", "Decided at", "Comment / outcome"]] +
+                          [[x.id, _e(x.action.get("action_id")), x.status.upper(), _e(x.decided_by or "-"), _e(x.decided_at[:19]), _e((x.comment + " / " + x.outcome)[:110])] for x in aps],
+                          [12 * mm, 40 * mm, 18 * mm, 22 * mm, 30 * mm, 48 * mm], st))
+    else:
+        story.append(_p("No active or offensive validation was proposed or executed.", st["s"]))
+    story.append(_p(f"Assessment timestamps: first audit event {_e(first_ts)}, last {_e(last_ts)} (UTC).", st["s"]))
+
+    # ---- appendices
+    story += [PageBreak(), _p("Appendix A. Evidence index (traceability)", st["h1"]),
+              _p("Every finding ID above links to evidence IDs here. Each file's SHA-256 was computed when it was captured; the raw file is available in the ARGUS data folder.", st["s"])]
+    story.append(_tbl([["Evidence", "Tool", "Mode", "Captured (UTC)", "File", "SHA-256", "Locator"]] +
+                      [[e.id, e.tool, e.mode.upper(), e.captured_at[:19], _e(e.file_path)[-36:], e.sha256[:16] + "...", _e(e.locator)[:20]] for e in evs],
+                      [15 * mm, 24 * mm, 14 * mm, 28 * mm, 40 * mm, 28 * mm, 21 * mm], st))
+    story += [_p("Appendix B. Refuted alerts (false positives)", st["h1"])]
+    if refuted:
+        story.append(_tbl([["ID", "Alert", "Asset", "Why refuted", "Evidence"]] + [[f.id, _e(f.title[:60]), _e(f.asset.key()), _e(f.refuted_reason[:150]), _e(", ".join(f.evidence_ids))] for f in refuted],
+                          [12 * mm, 46 * mm, 24 * mm, 62 * mm, 26 * mm], st))
+    else:
+        story.append(_p("None.", st["s"]))
+    story += [PageBreak(), _p("Appendix C. Agent decision log", st["h1"])]
+    for c in cards:
+        chosen_opts = [o for o in c.options if o.get("decision", "").startswith("CHOSEN")]
+        story.append(KeepTogether([_p(f"<b>{c.id}</b> [{_e(c.phase)}] planner: {_e(c.planner)} &middot; chose: {_e(', '.join(c.chosen))}", st["s"]),
+                                   _p(f"Reasoning: {_e(c.rationale)}<br/>Scope check: {_e(c.scope_check)}<br/>Outcome: {_e(c.outcome or 'pending')}", st["s"]), Spacer(1, 4)]))
+    story += [PageBreak(), _p("Appendix D. Audit trail (hash-chained)", st["h1"]),
+              _p(f"Chain verification: {'INTACT' if ok_chain else 'BROKEN at entry ' + str(bad)}.", st["s"])]
+    story.append(_tbl([["#", "Time (UTC)", "Actor", "Action", "Hash"]] + [[str(r["seq"]), r["ts"][:19], _e(r["actor"]), _e(r["action"]), r["hash"][:14]] for r in audit],
+                      [10 * mm, 34 * mm, 34 * mm, 62 * mm, 30 * mm], st))
+
+    buf = io.BytesIO()
+    doc = BaseDocTemplate(buf, pagesize=A4, leftMargin=20 * mm, rightMargin=20 * mm, topMargin=20 * mm, bottomMargin=18 * mm, title=a.title, author="ARGUS")
+
+    def deco(c, d):
+        c.saveState(); c.setFont("R", 7.5); c.setFillColor(colors.HexColor("#5A6573"))
+        c.drawString(20 * mm, 10 * mm, f"ARGUS VAPT report - {a.id} - CONFIDENTIAL")
+        c.drawRightString(190 * mm, 10 * mm, f"Page {d.page}")
+        c.restoreState()
+    doc.addPageTemplates([PageTemplate(id="m", frames=[Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height)], onPage=deco)])
+    doc.build(story)
+    return buf.getvalue()

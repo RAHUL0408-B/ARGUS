@@ -1,0 +1,38 @@
+:root{--bg:#f4f6f9;--card:#fff;--ink:#16202b;--mut:#5b6877;--line:#d9e0e8;--navy:#0f2742;--acc:#1f6fb2;--ok:#2e7d32;--warn:#b26a00;--bad:#b3261e;
+--crit:#7b1fa2;--high:#c62828;--med:#ef6c00;--low:#f9a825;--info:#546e7a}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{display:flex;justify-content:space-between;align-items:center;background:var(--navy);color:#fff;padding:10px 18px}
+.brand{display:flex;gap:10px;align-items:center}.logo{width:34px;height:34px;border-radius:8px;background:var(--acc);display:grid;place-items:center;font-weight:700}
+.brand small{display:block;color:#b9cce0;font-size:11px}.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{font-size:11px;padding:3px 8px;border-radius:12px;background:#183a5e;color:#d5e1ee}.badge.ok{background:#1b5e20}.badge.bad{background:#7f1d1d}
+.layout{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 54px)}
+aside{padding:14px;border-right:1px solid var(--line);background:#fff;overflow:auto}aside h3{margin:12px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)}
+textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;resize:vertical}
+.row{margin-top:8px}button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;padding:7px 12px}
+button.primary{background:var(--acc);color:#fff;border-color:var(--acc);width:100%}button.ghost{background:#fff;width:100%}button.sm{padding:3px 9px;font-size:12px;width:auto}
+button.danger{background:var(--bad);color:#fff;border-color:var(--bad)}button.good{background:var(--ok);color:#fff;border-color:var(--ok)}button:disabled{opacity:.5;cursor:not-allowed}
+.mini{font:11px/1.4 Consolas,monospace;background:#f3f5f7;padding:8px;border-radius:6px;overflow:auto;max-height:160px;white-space:pre-wrap}
+main{padding:14px 18px;overflow:auto}nav{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:10px}
+nav button{border:none;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 12px;color:var(--mut)}nav button.on{color:var(--navy);border-color:var(--acc);font-weight:600}
+.statusbar{margin-bottom:10px;color:var(--mut)}.hidden{display:none!important}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card h4{margin:0 0 6px;font-size:14px}.muted{color:var(--mut)}.small{font-size:12px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+th{background:var(--navy);color:#fff;text-align:left;padding:6px 8px;font-size:12px}td{padding:6px 8px;border-top:1px solid var(--line);vertical-align:top;font-size:13px}
+tr.click:hover{background:#eef4fa;cursor:pointer}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;color:#fff;font-weight:600}
+.sev-critical{background:var(--crit)}.sev-high{background:var(--high)}.sev-medium{background:var(--med)}.sev-low{background:var(--low);color:#222}.sev-info{background:var(--info)}.sev-refuted{background:#90a4ae}
+.st{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);background:#fff}
+.st.validated{border-color:var(--ok);color:var(--ok)}.st.corroborated{border-color:var(--acc);color:var(--acc)}.st.suspected{border-color:var(--warn);color:var(--warn)}.st.refuted,.st.failed{border-color:var(--bad);color:var(--bad)}.st.fixed{border-color:var(--ok);color:var(--ok)}
+.live{background:#e8f5e9;color:var(--ok)}.imp{background:#fff3e0;color:var(--warn)}.mode{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px}
+.pill{background:var(--bad);color:#fff;border-radius:10px;padding:0 6px;font-size:11px}
+.ev{display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}.ev .t{color:var(--mut);font-size:11px;min-width:62px}
+.ev.error .m{color:var(--bad)}.ev.scope .m{color:var(--warn)}.ev.decision .m{color:var(--acc)}.ev.result .m{color:var(--ok)}
+.opt{font-size:12px;padding:4px 6px;border-left:3px solid var(--line);margin:3px 0;background:#fafbfc}.opt.chosen{border-color:var(--ok);background:#f1f8f2}.opt.appr{border-color:var(--warn);background:#fff9ee}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.obs{border-left:4px solid var(--ok);padding-left:10px}.inf{border-left:4px solid var(--acc);padding-left:10px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:9}.mbox{background:#fff;border-radius:10px;width:min(900px,92vw);max-height:84vh;display:flex;flex-direction:column}
+.mhead{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);gap:10px}.mhead button{width:auto}
+#mbody{margin:0;padding:12px 14px;overflow:auto;font:12px/1.4 Consolas,monospace;white-space:pre-wrap}
+a.link{color:var(--acc);cursor:pointer;text-decoration:underline}.hist{padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:12px}.hist:hover,.hist.on{background:#eef4fa}
+.chat{max-height:380px;overflow:auto}.msg{padding:8px 10px;border-radius:8px;margin:6px 0;white-space:pre-wrap}.msg.u{background:#e3f0fb}.msg.a{background:#fff;border:1px solid var(--line)}
+svg text{font:11px "Segoe UI",sans-serif}
