@@ -15,6 +15,7 @@ from .report import build_pdf
 
 app = FastAPI(title="ARGUS", version="1.0")
 FRONTEND = config.ROOT / "frontend"
+engine.recover_interrupted()
 
 
 def lab_scope() -> Scope:
@@ -176,6 +177,8 @@ def retest(aid: str, fid: str):
         return engine.retest(aid, fid)
     except scopemod.ScopeViolation as ex:
         raise HTTPException(403, str(ex))
+    except TimeoutError as ex:
+        raise HTTPException(504, f"retest timed out; the finding was not changed ({ex})")
     except (ValueError, RuntimeError, runner.ToolUnavailable) as ex:
         raise HTTPException(400, str(ex))
 

@@ -127,7 +127,10 @@ def _candidates(aid: str):
     cands, hyps = planner.generate(a.scope, a.targets, a.intents, assets, findings, done, failed, msf_ready)
     old = {h.id: h for h in store.list_("hypothesis", Hypothesis, aid)}
     texts = {h.text: h for h in old.values()}
+    found_by = {r.asset.key(): r.evidence_id for r in store.list_("asset", AssetRecord, aid) if r.evidence_id}
     for h in hyps:
+        if not h.source_evidence and found_by.get(h.asset):      # cite the scan that discovered the service
+            h.source_evidence = [found_by[h.asset]]
         if h.text in texts:
             h.id, h.status = texts[h.text].id, texts[h.text].status
         else:
@@ -167,6 +170,29 @@ def approve_plan(aid: str, analyst: str = "analyst") -> None:
     t = threading.Thread(target=run_loop, args=(aid,), daemon=True, name=f"argus-{aid}")
     _threads[aid] = t
     t.start()
+
+
+def recover_interrupted() -> int:
+    """On server start no agent thread is alive, so anything still marked running was interrupted (crash, reboot).
+    Mark it stopped and say why, instead of showing a run that will never finish."""
+    n = 0
+    for a in store.list_("assessment", Assessment):
+        if a.status != "running":
+            continue
+        for j in store.list_("job", Job, a.id):
+            if j.status in ("running", "queued"):
+                j.status, j.error, j.finished_at = "cancelled", "interrupted: server restarted while this job was running", now()
+                store.put("job", j)
+        for ap in store.list_("approval", Approval, a.id):
+            if ap.status == "approved":
+                ap.status, ap.outcome = "failed", "interrupted: server restarted before the approved action finished"
+                store.put("approval", ap)
+        a.status, a.phase = "stopped", "stopped"
+        a.limitations.append("The server restarted while this assessment was running; it was marked stopped. Results gathered before that are kept.")
+        store.put("assessment", a)
+        store.audit(a.id, "system", "recover.interrupted", {})
+        n += 1
+    return n
 
 
 def stop(aid: str, analyst: str = "analyst") -> None:

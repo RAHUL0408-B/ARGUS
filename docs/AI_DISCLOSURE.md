@@ -2,7 +2,7 @@
 
 ## AI-generated code
 
-Most of this repository (backend, UI, tests, lab files, documents, sample inputs) was written with the assistance of Claude (Anthropic) through Claude Code, directed and reviewed by the team members. Commits are made under the team member's own identity. The code was run, tested (20 automated tests) and exercised live against the lab before being committed, but it should be reviewed like any other code.
+Most of this repository (backend, UI, tests, lab files, documents, sample inputs) was written with the assistance of Claude (Anthropic) through Claude Code, directed and reviewed by the team members. Commits are made under the team member's own identity. The code was run, tested (23 automated unit tests plus a live end-to-end suite) and exercised live against the lab before being committed, but it should be reviewed like any other code.
 
 ## AI used at runtime
 

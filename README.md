@@ -76,7 +76,10 @@ See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md). Summary: nmap, Nikto, OWASP ZA
 
 ```powershell
 cd backend
-python -m pytest -q      # 20 tests: scope guard, audit chain, parsers, correlation, risk, grounding, report
+python -m pytest -q      # 23 tests: scope guard, audit chain, parsers, correlation, risk, grounding, report, robustness
+cd ..
+python scripts\e2e_live.py           # live end-to-end suite against the lab (server + lab must be running)
+python scripts\make_test_report.py    # builds docs/ARGUS_Test_Report.pdf from the results
 ```
 
 ## Documentation
@@ -89,7 +92,8 @@ python -m pytest -q      # 20 tests: scope guard, audit chain, parsers, correlat
 
 ## Licensing assumptions
 
-- ARGUS source: written for this hackathon; licence to be chosen by the team before publication.
+- ARGUS source: [MIT License](LICENSE). It covers only the ARGUS code in this repository, not the tools it drives.
+- Use ARGUS only against systems you are authorized to test. The licence grants no permission to test anyone else's systems.
 - Third-party tools run as separate processes or containers and are not bundled: nmap (NPSL), Nikto (GPL-2.0), OWASP ZAP (Apache-2.0), Metasploit Framework (BSD-3, image pulled on demand), DVWA (GPL), OWASP Juice Shop (MIT).
 - Python libraries: FastAPI (MIT), pydantic (MIT), uvicorn (BSD), httpx (BSD), reportlab (BSD open-source edition), anthropic SDK (MIT, optional).
 - Nessus and Burp are commercial; ARGUS only reads exported files you provide. The files in `samples/` are **synthetic test inputs written by us**, not real scanner output, and contain no CVEs.

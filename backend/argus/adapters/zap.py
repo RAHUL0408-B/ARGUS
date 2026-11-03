@@ -64,6 +64,7 @@ class ZapAdapter(Adapter):
         job.status, job.started_at, job.command = "running", now(), f"ZAP API spider{'+active' if active else ''} {url}"
         from .. import store
         store.put("job", job); store.event(aid, "job", job.model_dump())
+        partial = ""
         try:
             ok, msg = self.available()
             if not ok:
@@ -72,8 +73,16 @@ class ZapAdapter(Adapter):
             self._wait(job, lambda: int(self._get("/JSON/spider/view/status/", scanId=sid)["status"]) >= 100, timeout, "spider")
             if active:
                 self._get("/JSON/ascan/action/setOptionMaxScanDurationInMins/", Integer="4")   # cap: lab only, keeps demo bounded
-                asid =self._get("/JSON/ascan/action/scan/", url=url, recurse="true")["scan"]
-                self._wait(job, lambda: int(self._get("/JSON/ascan/view/status/", scanId=asid)["status"]) >= 100, timeout * 2, "active scan")
+                asid = self._get("/JSON/ascan/action/scan/", url=url, recurse="true")["scan"]
+                try:
+                    self._wait(job, lambda: int(self._get("/JSON/ascan/view/status/", scanId=asid)["status"]) >= 100, int(timeout * 1.5), "active scan")
+                except TimeoutError:
+                    # ZAP's own duration cap is soft; stop the scan ourselves and keep the alerts already raised (labelled partial)
+                    try:
+                        self._get("/JSON/ascan/action/stop/", scanId=asid)
+                    except Exception:
+                        pass
+                    partial = f"active scan stopped by ARGUS after {int(timeout * 1.5)}s; results are partial"
             self._wait(job, lambda: int(self._get("/JSON/pscan/view/recordsToScan/")["recordsToScan"]) == 0, 60, "passive scan")
             alerts = self._get("/JSON/core/view/alerts/", baseurl=url, start="0", count="500").get("alerts", [])
             urls = self._get("/JSON/core/view/urls/", baseurl=url).get("urls", [])
@@ -94,6 +103,6 @@ class ZapAdapter(Adapter):
         ev = runner.new_evidence(aid, "zap", "live", job.id, path, sha, "$.alerts", f"{len(alerts)} alerts, {len(urls)} URLs from {url}")
         res = parse_alerts(aid, alerts, ev.id)
         res.evidence.append(ev)
-        res.notes.append(f"ZAP discovered {len(urls)} URLs" + ("; active scan was capped at 4 minutes, so coverage may be partial" if active else ""))
+        res.notes.append(f"ZAP discovered {len(urls)} URLs" + (f"; {partial}" if partial else "; active scan was capped at 4 minutes, so coverage may be partial" if active else ""))
         runner.finish_ok(job, ev.id)
         return res
