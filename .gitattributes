@@ -1,0 +1,11 @@
+# Keep binary files binary: git's content heuristic can misdetect a PDF as text (e.g. when its first
+# bytes happen to be mostly ASCII before any compressed/binary stream), which lets core.autocrlf mangle
+# it on checkout. Force these extensions explicitly instead of relying on auto-detection.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.zip binary
+*.sqlite binary
+*.db binary
