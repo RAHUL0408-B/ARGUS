@@ -52,6 +52,8 @@ First run pulls images (DVWA, Juice Shop, ZAP, a Debian tools image) and builds 
 
 The default scope in `backend/argus/api.py` (`lab_scope`) allows only the lab network and excludes .1, .2 and .3. To test an organizer-provided lab, change `targets` and `exclusions` there (or send a `scope` object with `POST /api/assessments`).
 
+`scripts\start.ps1` runs `scripts\lab_init.ps1` automatically after `docker compose up`: it creates the DVWA database (a fresh container has none), logs in as `admin`/`password`, confirms DVWA's security level is `low`, and registers that session with ZAP as a Replacer rule so ZAP's own spider/active scan (which never fills in a login form by itself) rides an authenticated session and actually reaches `/vulnerabilities/*` instead of bouncing off `login.php`. Safe to re-run; it only resets the lab DB and refreshes the ZAP rule. If you tear down and rebuild the lab containers, re-run `scripts\lab_init.ps1` (or the `.sh` equivalent) before approving an active scan.
+
 ## Using the UI
 
 1. Pick a preset or type a request, then **Check scope and make a plan**.
@@ -76,7 +78,7 @@ See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md). Summary: nmap, Nikto, OWASP ZA
 
 ```powershell
 cd backend
-python -m pytest -q      # 29 tests: scope guard, audit chain, parsers, correlation, risk, grounding, report, robustness, out-of-scope filtering, criticality
+python -m pytest -q      # 32 tests: scope guard, audit chain, parsers, correlation, risk, grounding, report, robustness, out-of-scope filtering, criticality, redaction, retest history
 cd ..
 python scripts\e2e_live.py           # live end-to-end suite against the lab (server + lab must be running)
 python scripts\make_test_report.py    # builds docs/ARGUS_Test_Report.pdf from the results
