@@ -23,7 +23,49 @@ It was built for **DataOps Innovation Hackathon 2026, Problem Statement 1** (Hac
 
 ---
 
-## 2. Input and output at a glance
+## 2. Glossary - plain-English definitions of the security terms used in this doc
+
+If cybersecurity is new to you, read this section first; everything below assumes these words.
+
+**The big picture**
+- **VAPT** = **V**ulnerability **A**ssessment and **P**enetration **T**est. "Vulnerability assessment" means finding weaknesses (like a home inspector finding a broken lock). "Penetration test" means actually trying to use that weakness to get in (like a locksmith proving the lock can be picked). ARGUS does the finding automatically and the "trying it" part only with a human's explicit approval, and only with safe, read-only checks - never anything destructive.
+- **Target / asset** = a computer, server or web app being tested. In this project the targets are two deliberately-broken practice apps running in Docker (see section 6), never anything on the real internet.
+- **Scope** = the list of targets you are *allowed* to test, and which ones are off-limits. Testing anything outside scope without permission is illegal (unauthorized access), so ARGUS refuses by default and only allows what's explicitly listed.
+- **Finding** = one specific weakness ARGUS believes it found, e.g. "this login page is vulnerable to SQL injection." Each finding carries evidence, a confidence score and a fix.
+- **False positive** = a finding that looks real but isn't (a scanner misread something). ARGUS tries to catch these with a second, independent check before trusting a finding.
+
+**Common weakness types you'll see in findings**
+- **SQL injection (SQLi)** = a web form that passes your input straight into a database command. If the input isn't checked, an attacker can type database commands instead of normal data (e.g. a username) and read or change data they shouldn't see. One of the most common and serious web bugs.
+- **XSS (Cross-Site Scripting)** = a web page that echoes your input back into the page without cleaning it, letting an attacker inject their own script that runs in another user's browser (e.g. to steal their login session). "Reflected" XSS comes from a single malicious link; "stored" XSS is saved on the server and hits every visitor.
+- **Cleartext protocol** = data sent over the network unencrypted (plain HTTP instead of HTTPS, plain FTP, etc.), so anyone who can see the network traffic (e.g. on the same Wi-Fi) can read passwords or data in transit.
+- **Outdated software / version-based finding** = the scanner identified the exact software and version a server is running (from a banner it announces), and that version is publicly known to have bugs. This is a *weak* signal on its own, because version banners can be wrong or faked - which is why ARGUS treats these as "suspected" until something re-confirms them.
+- **CVE** (Common Vulnerabilities and Exposures) = a public ID number (like `CVE-2021-44228`, the Log4Shell bug) assigned to one specific, documented software vulnerability. Think of it as a case file number for a known bug.
+- **CVSS** (Common Vulnerability Scoring System) = a standard 0-10 severity score for a vulnerability, used to compare how bad different bugs are (10 = critical).
+- **CWE** (Common Weakness Enumeration) = a category ID for a general *type* of bug (e.g. CWE-89 is "SQL Injection" as a category), as opposed to CVE which is one specific instance of a bug in one specific product.
+- **KEV** (Known Exploited Vulnerabilities) = a government-maintained list (CISA's) of CVEs that are confirmed to be actively used by real attackers right now, not just theoretically dangerous.
+
+**Tools and techniques ARGUS runs**
+- **nmap** = a tool that scans a target to find out which network ports are open and what software (and version) is listening on each one. This is always the first step - you can't test a service you don't know exists.
+- **Nikto** = a tool that checks a web server for common misconfigurations and known-risky files (an older, simpler scanner than ZAP).
+- **OWASP ZAP** = a full web-application scanner. Its "passive scan" just reads traffic without attacking anything (safe, runs automatically). Its "active scan" actually sends attack-like payloads to see if they work (e.g. trying real SQL injection strings) - this can affect the app, so ARGUS always makes a human approve it first.
+- **Metasploit** = a well-known penetration-testing framework containing ready-made exploit and scanning modules. ARGUS only uses its safe, read-only "auxiliary" scanner modules (to double-check a version number, for example), from a fixed allow-list, and only after human approval - never an actual exploit module.
+- **DVWA** (Damn Vulnerable Web Application) and **OWASP Juice Shop** = two intentionally broken web apps built for security training. They are the practice targets in this project's Docker lab - safe to attack because they were made to be attacked.
+- **Spider / crawl** = having a tool follow every link on a website automatically to build a map of all its pages, so later scans know what to check.
+- **Passive vs. active vs. intrusive vs. exploit** = an escalating scale of how risky/aggressive a check is. Passive only reads/observes; active sends test payloads; intrusive can affect the app's behavior or state; exploit would actually take advantage of a bug. ARGUS requires explicit human approval before anything intrusive or above.
+- **Nessus / Burp Suite / OpenVAS** = well-known commercial (or semi-commercial) vulnerability scanners. ARGUS doesn't run these live itself (no license available for the hackathon); instead it can *import* a report file one of these tools already produced and fold those findings into its own analysis.
+
+**How ARGUS reasons about what it finds**
+- **Hypothesis** = a guess ARGUS forms about what might be wrong (e.g. "this web server might have misconfigurations") before it has proof. It picks the cheapest, safest next check to test that guess.
+- **Confidence score** = a 0-100 number ARGUS assigns to each finding based on *how* it was found (seen by one tool vs. confirmed by two independent tools vs. actually re-checked and confirmed) - shown as Low/Medium/High.
+- **Status ladder** (observed -> suspected -> corroborated -> validated -> refuted -> fixed) = how sure ARGUS is about a finding over time: first noticed, then another signal supports it, then two tools agree, then it was independently re-checked and confirmed true, or re-checked and shown to be wrong (refuted), or confirmed fixed on retest.
+- **Grounding** = making sure any text an AI model writes (an explanation, a rationale) only states facts ARGUS can actually point to in its own evidence - never something the AI invented. ARGUS checks this automatically and rejects/relabels anything it can't verify.
+- **Decision Card** = a written record of one decision ARGUS made: what it knew, what options it considered, and why it picked the one it ran. This is what makes the process auditable instead of a black box.
+- **Audit log / hash-chained** = a tamper-evident record of every action taken. "Hash-chained" means each entry contains a fingerprint of the previous entry, so if anyone edited an old entry, every entry after it would no longer match - making silent tampering detectable.
+- **Priority / risk score** = a single 0-10 number combining a finding's base severity with how exposed, exploitable and important the affected system is, so the report can be read top-to-bottom as "fix this first."
+
+---
+
+## 3. Input and output at a glance
 
 ### Inputs
 | Input | Where it comes from | Example |
@@ -47,7 +89,7 @@ It was built for **DataOps Innovation Hackathon 2026, Problem Statement 1** (Hac
 
 ---
 
-## 3. Tech stack
+## 4. Tech stack
 
 | Layer | What we used |
 |---|---|
@@ -69,7 +111,7 @@ It was built for **DataOps Innovation Hackathon 2026, Problem Statement 1** (Hac
 
 ---
 
-## 4. Repository layout
+## 5. Repository layout
 
 ```
 backend/argus/
@@ -100,7 +142,7 @@ docs/               ARCHITECTURE.md, INTEGRATIONS.md, AI_DISCLOSURE.md, project 
 
 ---
 
-## 5. The lab (what we test against)
+## 6. The lab (what we test against)
 
 `lab/docker-compose.yml` creates an isolated Docker network `argus-lab_labnet` (10.77.0.0/24):
 
@@ -116,7 +158,7 @@ The exclusion of `.1/.2/.3` exists because an early run reached the Docker gatew
 
 ---
 
-## 6. How it works - the full flow
+## 7. How it works - the full flow
 
 ### Step 0: Create assessment (`engine.create_assessment`)
 1. The text is parsed with regex: **targets** (IPs, CIDRs, URLs, hostnames) and **intents** (`no_web`, `web_only`, `passive_only`, `no_dos`).
@@ -172,7 +214,7 @@ Candidate details (from `planner.generate`):
 
 ---
 
-## 7. Tool integrations (honest status)
+## 8. Tool integrations (honest status)
 
 | Tool | Status | How it runs | Notes |
 |---|---|---|---|
@@ -190,7 +232,7 @@ The UI "Tools" tab (`GET /api/matrix`) probes each tool at runtime so the matrix
 
 ---
 
-## 8. Core engines in detail
+## 9. Core engines in detail
 
 ### 8.1 Scope guard (`scope.py`) - plain code, default deny
 - Target matching: exact host, IP-in-CIDR, URL host extraction.
@@ -240,7 +282,7 @@ Cover (scope, exclusions, authorized by, window, audit-chain status) -> 1 Execut
 
 ---
 
-## 9. Web UI (what the user sees)
+## 10. Web UI (what the user sees)
 
 Left panel: request box, presets ("Web app check", "One server, safe only", "Juice Shop"), **Check scope & make a plan**, a **safety demo** button that asks for `8.8.8.8` and `scanme.nmap.org` (rejected, no traffic), the allowed-scope box, past assessments.
 
@@ -251,7 +293,7 @@ Live updates use Server-Sent Events. Deep link: `/?a=<assessment id>&tab=finding
 
 ---
 
-## 10. API reference (all under `/api`)
+## 11. API reference (all under `/api`)
 
 | Method + path | Purpose |
 |---|---|
@@ -274,7 +316,7 @@ Live updates use Server-Sent Events. Deep link: `/?a=<assessment id>&tab=finding
 
 ---
 
-## 11. How to run it
+## 12. How to run it
 
 ```powershell
 pip install -r requirements.txt
@@ -288,7 +330,7 @@ Requirements: Windows 10/11 (Linux/macOS work too), Docker Desktop with ~6 GB fr
 
 ---
 
-## 12. Plan vs. what was actually built (important for honesty in the demo)
+## 13. Plan vs. what was actually built (important for honesty in the demo)
 
 | Original plan (PDF) | What exists in the code | Status |
 |---|---|---|
@@ -313,7 +355,7 @@ Requirements: Windows 10/11 (Linux/macOS work too), Docker Desktop with ~6 GB fr
 
 ---
 
-## 13. Strengths to emphasise at the demo
+## 14. Strengths to emphasise at the demo
 1. **Scope guard in code** - the out-of-scope demo (`8.8.8.8`) sends zero traffic and is logged. The `.1` gateway exclusion is a real incident turned into a safeguard.
 2. **Decision Cards** with options considered, not a fixed script.
 3. **False-positive removal that actually happens** (HSTS on HTTP refuted by a real request).
@@ -323,7 +365,7 @@ Requirements: Windows 10/11 (Linux/macOS work too), Docker Desktop with ~6 GB fr
 7. **Honest integration matrix** and an AI disclosure document.
 8. **Robustness**: restart recovery, partial ZAP results, clean 504 on retest timeout, coverage-gap reporting.
 
-## 14. Known weaknesses / risks
+## 15. Known weaknesses / risks
 - Claude planner path has never been executed.
 - `lab_scope()` is hard-coded; the organizer's real lab must be set in `api.py` or sent as a `scope` object.
 - PDF fonts assume Windows paths (falls back to Helvetica elsewhere).
