@@ -54,8 +54,8 @@ class ZapAdapter(Adapter):
             try:
                 if check():
                     return
-            except httpx.TimeoutException:
-                pass   # ZAP's API is slow while an active scan is running; keep polling until our own deadline
+            except httpx.TransportError:
+                pass   # ZAP's API gets slow or briefly drops connections under active-scan load; keep polling until our own deadline
             time.sleep(3)
         raise TimeoutError(f"{label} did not finish within {timeout}s")
 
@@ -73,6 +73,25 @@ class ZapAdapter(Adapter):
             self._wait(job, lambda: int(self._get("/JSON/spider/view/status/", scanId=sid)["status"]) >= 100, timeout, "spider")
             if active:
                 self._get("/JSON/ascan/action/setOptionMaxScanDurationInMins/", Integer="4")   # cap: lab only, keeps demo bounded
+                # The active scan exists to test exactly the injection-class hypotheses it was approved for
+                # (see planner.py's zap_active 'why'). Restricting it to SQLi + XSS scanners, instead of ZAP's
+                # full ~100-plugin default policy, spends the whole 4-minute budget on those classes across
+                # every discovered URL instead of mostly on unrelated checks that never finish in time.
+                try:
+                    self._get("/JSON/ascan/action/disableAllScanners/")
+                    # SQL injection (40018-22, 40027) + reflected/persistent XSS (40012/40014). DOM-based XSS
+                    # (40026) is deliberately excluded: it drives a headless browser engine per page and OOM-
+                    # killed the ZAP container in this lab's memory budget; reflected/persistent coverage is
+                    # enough to confirm the "xss" issue class. ZAP rejects the whole enableScanners call (400
+                    # does_not_exist) if ANY id in the list doesn't exist in this ZAP version, which would
+                    # otherwise leave 0 scanners enabled and turn the active scan into a silent no-op --
+                    # verify the ids are real before relying on them.
+                    self._get("/JSON/ascan/action/enableScanners/", ids="40018,40019,40020,40021,40022,40027,40012,40014")
+                    on = self._get("/JSON/ascan/view/scanners/").get("scanners", [])
+                    if not any(s.get("enabled") == "true" for s in on):
+                        self._get("/JSON/ascan/action/enableAllScanners/")   # fall back rather than scan with nothing enabled
+                except Exception:
+                    pass   # best-effort focus; an unrestricted scan is still safe, just slower
                 asid = self._get("/JSON/ascan/action/scan/", url=url, recurse="true")["scan"]
                 try:
                     self._wait(job, lambda: int(self._get("/JSON/ascan/view/status/", scanId=asid)["status"]) >= 100, int(timeout * 1.5), "active scan")
