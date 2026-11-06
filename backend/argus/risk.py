@@ -33,6 +33,10 @@ def score(f: Finding, criticality: float = 1.0, path_bonus: float = 0.0) -> dict
                         "path_bonus": path_bonus}}
 
 
+def conf_level(c: int) -> str:
+    return "high" if c >= 70 else "medium" if c >= 40 else "low"
+
+
 def band(p: float) -> str:
     return "critical" if p >= 9 else "high" if p >= 7 else "medium" if p >= 4 else "low" if p >= 1 else "info"
 
@@ -41,6 +45,7 @@ def rank(assessment_id: str, criticality: dict[str, float] | None = None, path_b
     fs = store.list_("finding", Finding, assessment_id)
     for f in fs:
         f.risk = score(f, (criticality or {}).get(f.asset.host, 1.0), (path_bonus or {}).get(f.id, 0.0))
+        f.risk["confidence_level"] = conf_level(f.confidence)
         f.risk["band"] = band(f.risk["priority"]) if not f.risk.get("excluded") else "refuted"
     live = sorted([f for f in fs if not f.risk.get("excluded")], key=lambda x: (-x.risk["priority"], SEV_ORDER.index(x.severity), x.id))
     for i, f in enumerate(live, 1):

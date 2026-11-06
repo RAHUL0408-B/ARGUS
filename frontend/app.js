@@ -241,7 +241,7 @@ function renderFindings() {
   h += `<details class="card small"><summary style="margin:0">Add results from another tool (Nessus / Burp / OpenVAS) - IMPORT only, ARGUS does not run these</summary>
    <div style="margin-top:8px">Try a sample: ${["nessus", "burp", "openvas"].map(t => `<button class="sm" onclick="impSample('${t}')">sample ${t}</button>`).join(" ")}</div>
    <div class="row" style="display:flex;gap:6px"><input type="file" id="fileIn"><select id="fileTool" style="width:110px"><option>nessus</option><option>burp</option><option>openvas</option></select><button class="sm" id="fileGo">Import</button></div></details>`;
-  h += fs.length ? `<table><tr><th>#</th><th>ID</th><th>Finding</th><th>Asset</th><th>Severity</th><th>Priority ${help("0-10, higher = fix sooner")}</th><th>Proof level</th><th>Conf. ${help("0-100 how sure ARGUS is")}</th><th>Reported by</th></tr>` + fs.map(f => `<tr class="click ${f.id === selFinding ? "sel" : ""}" data-f="${esc(f.id)}"><td>${esc(f.risk.rank ?? "-")}</td><td>${esc(f.id)}</td><td>${esc(f.title.slice(0, 70))}</td><td>${esc(f.asset.host + ":" + (f.asset.port || "-"))}</td><td>${sev(f.status === "refuted" ? "refuted" : f.severity)}</td><td>${esc(f.risk.priority ?? "-")}</td><td>${st(f.status)}</td><td>${f.confidence}</td><td class="small">${[...new Set(f.occurrences.map(o => o.tool + (o.mode === "import" ? "*" : "")))].join(", ")}</td></tr>`).join("") + `</table>`
+  h += fs.length ? `<table><tr><th>#</th><th>ID</th><th>Finding</th><th>Asset</th><th>Severity</th><th>Priority ${help("0-10, higher = fix sooner")}</th><th>Proof level</th><th>Conf. ${help("0-100 how sure ARGUS is")}</th><th>Reported by</th></tr>` + fs.map(f => `<tr class="click ${f.id === selFinding ? "sel" : ""}" data-f="${esc(f.id)}"><td>${esc(f.risk.rank ?? "-")}</td><td>${esc(f.id)}</td><td>${esc(f.title.slice(0, 70))}</td><td>${esc(f.asset.host + ":" + (f.asset.port || "-"))}</td><td>${sev(f.status === "refuted" ? "refuted" : f.severity)}</td><td>${esc(f.risk.priority ?? "-")}</td><td>${st(f.status)}</td><td>${f.confidence} <span class="muted small">${esc((f.risk || {}).confidence_level || "")}</span></td><td class="small">${[...new Set(f.occurrences.map(o => o.tool + (o.mode === "import" ? "*" : "")))].join(", ")}</td></tr>`).join("") + `</table>`
     : `<div class="card">${empty("empty", "No findings to show", all.length ? "Try another filter." : "Findings appear here as the tools report.")}</div>`;
   h += `<div class="small muted">* = imported file, not run by ARGUS. Click a row for the full explanation.</div><div id="detail"></div>`;
   $("#t-findings").innerHTML = h;
@@ -251,7 +251,7 @@ function renderFindings() {
   document.querySelectorAll("#t-findings tr.click").forEach(r => r.onclick = () => { selFinding = r.dataset.f; renderFindings(); detail(selFinding); });
   $("#fileGo").onclick = async () => {
     const f = $("#fileIn").files[0]; if (!f) return toast("Choose a file first.", true);
-    const b = btoa(String.fromCharCode(...new Uint8Array(await f.arrayBuffer())));
+    const u8 = new Uint8Array(await f.arrayBuffer()); let bin = ""; for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); const b = btoa(bin);
     try { await api(`/assessments/${cur}/import`, { tool: $("#fileTool").value, filename: f.name, content_b64: b }); toast("Imported. Findings merged."); refresh(); } catch (e) { toast(e.message, true); }
   };
   if (selFinding) detail(selFinding, true);
@@ -261,7 +261,7 @@ function detail(id, quiet) {
   const f = state.findings.find(x => x.id === id); if (!f) return;
   const r = f.risk || {}, fac = r.factors || {}, box = $("#detail"); if (!box) return;
   box.innerHTML = `<div class="card" style="margin-top:12px"><h4>${esc(f.id)} - ${esc(f.title)} ${sev(f.severity)} ${st(f.status)}</h4>
-  <div class="plain"><b>In plain words:</b> ${esc(STATUS_HELP[f.status] || "")} Confidence is ${f.confidence}/100.</div>
+  <div class="plain"><b>In plain words:</b> ${esc(STATUS_HELP[f.status] || "")} Confidence is ${f.confidence}/100 (${esc((f.risk || {}).confidence_level || "n/a")}).</div>
   <div class="two"><div class="obs"><b>OBSERVED <span class="muted small">(straight from tool evidence)</span></b><div class="small">${esc(f.description)}</div>
     <div class="small"><b>Asset:</b> ${esc(f.asset.host)}:${esc(f.asset.port || "-")} ${esc(f.asset.product)} ${esc(f.asset.version)}${f.affected_urls.length ? "<br><b>URLs:</b> " + f.affected_urls.slice(0, 4).map(esc).join(", ") : ""}</div>
     <div class="small"><b>Reported by:</b> ${f.occurrences.map(o => `${esc(o.tool)} ${mode(o.mode)} ${evLink(o.evidence_id)}`).join("<br>")}</div>
@@ -271,10 +271,12 @@ function detail(id, quiet) {
     ${fac.base !== undefined ? `<div class="small"><b>Priority ${esc(r.priority)}</b> = base ${esc(fac.base)} (${esc(fac.base_source)}) x exploit ${esc(fac.exploitability)} (${esc(fac.exploitability_source)}) x confidence ${esc(fac.confidence_weight)}${fac.path_bonus ? " + attack-path bonus " + fac.path_bonus : ""}</div>` : `<div class="small">${esc(r.reason || "")}</div>`}
     ${f.validation && f.validation.verdict ? `<div class="small"><b>Double-check:</b> ${esc(f.validation.verdict)} by ${esc(f.validation.by)} - ${esc(f.validation.reason)}</div>` : ""}
     <div class="small"><b>How to fix:</b> ${esc(f.remediation || "n/a")}</div></div></div>
+  <div class="row small">Asset criticality for ${esc(f.asset.host)}: <select id="crit" onchange="setCrit('${esc(f.asset.host)}', this.value)">${[["0.8", "low"], ["1", "normal"], ["1.2", "critical"]].map(o => `<option value="${o[0]}" ${(state.assessment.criticality || {})[f.asset.host] == o[0] || (!(state.assessment.criticality || {})[f.asset.host] && o[0] === "1") ? "selected" : ""}>${o[1]}</option>`).join("")}</select> ${help("Business importance of this host. Multiplies the priority score (0.8 / 1.0 / 1.2).")}</div>
   <div class="row"><button class="sm" onclick="retest('${esc(f.id)}')">Retest (after fixing)</button> <button class="sm" onclick="proposeVal('${esc(f.id)}')">Ask for Metasploit check (needs approval)</button></div></div>`;
   if (!quiet) box.scrollIntoView({ behavior: "smooth" });
 }
 window.proposeVal = async id => { try { const r = await api(`/assessments/${cur}/findings/${id}/propose-validation`, { module: "auxiliary/scanner/http/http_version" }); toast(`Approval ${r.id} requested. Decide it in the Approvals tab.`); await refresh(); tab("approvals"); } catch (e) { toast(e.message, true); } };
+window.setCrit = async (host, v) => { try { await api(`/assessments/${cur}/criticality`, { host, value: parseFloat(v) }); toast(`Criticality of ${host} set. Priorities recalculated.`); refresh(); } catch (e) { toast(e.message, true); } };
 window.retest = async id => { try { const r = await api(`/assessments/${cur}/findings/${id}/retest`, {}); toast(`${r.finding}: ${r.before} -> ${r.after}. ${r.reason}`); refresh(); } catch (e) { toast(e.message, true); } };
 
 function renderApprovals() {

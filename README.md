@@ -76,7 +76,7 @@ See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md). Summary: nmap, Nikto, OWASP ZA
 
 ```powershell
 cd backend
-python -m pytest -q      # 23 tests: scope guard, audit chain, parsers, correlation, risk, grounding, report, robustness
+python -m pytest -q      # 29 tests: scope guard, audit chain, parsers, correlation, risk, grounding, report, robustness, out-of-scope filtering, criticality
 cd ..
 python scripts\e2e_live.py           # live end-to-end suite against the lab (server + lab must be running)
 python scripts\make_test_report.py    # builds docs/ARGUS_Test_Report.pdf from the results

@@ -3,7 +3,7 @@
 Observed evidence (tool output) and analysis (rule/AI inference) are visibly separated.
 """
 from __future__ import annotations
-import io
+import io, re
 from xml.sax.saxutils import escape
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -13,7 +13,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (BaseDocTemplate, Frame, KeepTogether, NextPageTemplate, PageBreak, PageTemplate, Paragraph, Spacer, Table, TableStyle)
 from reportlab.lib.fonts import addMapping
-from . import config, store
+from . import config, grounding, store
 from .models import Approval, Assessment, DecisionCard, Evidence, Finding, Job
 
 _fonts_ready = False
@@ -69,6 +69,10 @@ def _sev_tag(sev: str) -> str:
     return f"<font color='{SEV_COL.get(sev, '#000000')}'><b>{sev.upper()}</b></font>"
 
 
+def _plain(t: str) -> str:
+    return re.sub(r"<[^>]+>", " ", t).replace("&amp;", "&").replace("&middot;", "-")
+
+
 def build_pdf(aid: str) -> bytes:
     _fonts()
     st = _styles()
@@ -91,6 +95,7 @@ def build_pdf(aid: str) -> bytes:
     has_import = any(e.mode == "import" for e in evs)
 
     story = []
+    narr: list[str] = []
     # ---- cover
     story += [Spacer(1, 40 * mm), _p("VULNERABILITY ASSESSMENT &amp; PENETRATION TEST REPORT", ParagraphStyle("c0", fontName="R", fontSize=11, textColor=ACCENT)),
               _p(_e(a.title), ParagraphStyle("c1", fontName="R-B", fontSize=26, leading=30, textColor=NAVY, spaceAfter=6)),
@@ -114,14 +119,16 @@ def build_pdf(aid: str) -> bytes:
     validated = [f for f in active if f.status == "validated"]
     story += [_p("1. Executive Summary", st["h1"])]
     hosts = sorted({f.asset.host for f in active})
-    story.append(_p(f"ARGUS assessed {len(a.targets)} authorized target(s) ({_e(', '.join(a.targets))}) and identified <b>{len(active)}</b> distinct finding(s) "
+    _t1 = (f"ARGUS assessed {len(a.targets)} authorized target(s) ({_e(', '.join(a.targets))}) and identified <b>{len(active)}</b> distinct finding(s) "
                     f"across {len(hosts)} host(s), plus {len(info_items)} informational observation(s) (Appendix E). {len(refuted)} additional tool alert(s) were investigated and <b>refuted as false positives</b>; they are listed in Appendix B and excluded from the risk ranking. "
-                    f"{len(validated)} finding(s) were independently validated, and {len([f for f in active if len({o.tool for o in f.occurrences}) >= 2])} were reported independently by more than one tool.", st["b"]))
+                    f"{len(validated)} finding(s) were independently validated, and {len([f for f in active if len({o.tool for o in f.occurrences}) >= 2])} were reported independently by more than one tool.")
+    narr.append(_plain(_t1)); story.append(_p(_t1, st["b"]))
     if active:
         top = active[:3]
-        story.append(_p("<b>Highest-priority issues</b> (ranked by a transparent score, see section 3): " +
-                        "; ".join(f"<b>{f.id}</b> {_e(f.title[:70])} on {_e(f.asset.key())} (priority {f.risk.get('priority')}, {f.status}) " +
-                                  " ".join(f"[{e}]" for e in f.evidence_ids[:2]) for f in top) + ".", st["b"]))
+        _t2 = ("<b>Highest-priority issues</b> (ranked by a transparent score, see section 3): " +
+               "; ".join(f"<b>{f.id}</b> {_e(f.title[:70])} on {_e(f.asset.key())} (priority {f.risk.get('priority')}, {f.status}) " +
+                         " ".join(f"[{e}]" for e in f.evidence_ids[:2]) for f in top) + ".")
+        narr.append(_plain(_t2)); story.append(_p(_t2, st["b"]))
     story.append(_p("<b>Overall assessment.</b> " + (
         "Significant weaknesses were found that warrant prompt remediation." if any(f.severity in ("high", "critical") for f in active) else
         "No high or critical issues were confirmed by the tools used; the findings are predominantly hardening and configuration weaknesses. This is not a guarantee of security: see Assessment Limitations."), st["b"]))
@@ -155,7 +162,7 @@ def build_pdf(aid: str) -> bytes:
     story.append(Spacer(1, 3 * mm))
     rows = [["Rank", "ID", "Finding", "Asset", "Sev.", "Priority", "Status", "Conf."]]
     for f in active:
-        rows.append([str(f.risk.get("rank", "")), f.id, _e(f.title[:70]), _e(f.asset.key()), _sev_tag(f.severity), str(f.risk.get("priority", "")), f.status, str(f.confidence)])
+        rows.append([str(f.risk.get("rank", "")), f.id, _e(f.title[:70]), _e(f.asset.key()), _sev_tag(f.severity), str(f.risk.get("priority", "")), f.status, f"{f.confidence} ({f.risk.get('confidence_level', '-')})"])
     story.append(_tbl(rows, [10 * mm, 12 * mm, 68 * mm, 26 * mm, 16 * mm, 14 * mm, 20 * mm, 10 * mm], st))
 
     # ---- 7.4 detailed findings
@@ -170,7 +177,7 @@ def build_pdf(aid: str) -> bytes:
              (f"{f.cvss_score} {_e(f.cvss_vector)} (source: {_e(f.cvss_source)})" if f.cvss_score is not None else "not provided by any tool")],
             ["CVE / CWE / OWASP", f"{_e(', '.join(f.cve) or 'none reported')} / {_e(', '.join(f.cwe) or 'n/a')} / {_e(f.owasp or 'n/a')}"],
             ["MITRE ATT&amp;CK (indicative)", _e(", ".join(f.attack) or "n/a")],
-            ["Validation status", f"<b>{f.status.upper()}</b> &middot; confidence {f.confidence}/100" +
+            ["Validation status", f"<b>{f.status.upper()}</b> &middot; confidence {f.confidence}/100 ({_e(r.get('confidence_level', 'n/a'))})" +
              (f"<br/>Validation: {_e(f.validation.get('verdict'))} by {_e(f.validation.get('by'))} - {_e(f.validation.get('reason'))} [{_e(f.validation.get('evidence_id'))}]" if f.validation else "")],
             ["Priority", f"{r.get('priority', '-')} (rank {r.get('rank', '-')})" if r else "-"]], [38 * mm, 132 * mm], st, header=False)
         obs = _p("<b>OBSERVED (tool evidence):</b> " + _e(f.description[:700]) + "<br/>Reported by: " +
@@ -202,6 +209,9 @@ def build_pdf(aid: str) -> bytes:
         lim.append("Some data was imported from files (marked IMPORT). Imported data was not re-executed by ARGUS; sample import files are synthetic test inputs if so named.")
     for l in lim:
         story.append(_p("&bull; " + _e(l), st["s"]))
+    gok, gprobs = grounding.validate(aid, " ".join(narr), require_citation=False)
+    story.append(_p("&bull; Grounding check of the narrative text (cited evidence ids exist; no CVE or CVSS value that no tool reported): " +
+                    ("<b>PASSED</b>." if gok else "<b>FAILED</b> - " + _e("; ".join(gprobs))), st["s"]))
     story.append(_p("Human approvals (active validation)", st["h2"]))
     if aps:
         story.append(_tbl([["ID", "Action", "Status", "Decided by", "Decided at", "Comment / outcome"]] +

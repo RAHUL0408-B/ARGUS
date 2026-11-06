@@ -5,7 +5,7 @@ Choice is made by the rule planner by default. If ANTHROPIC_API_KEY is set, Clau
 writes the rationale; its answer is validated against the candidate list and falls back to the rules on any problem.
 """
 from __future__ import annotations
-import json
+import json, re
 from urllib.parse import urlparse
 from .. import config, scope as scopemod
 from ..adapters.nmap import is_http
@@ -126,6 +126,18 @@ def rule_choose(cands: list[Candidate], findings_n: int) -> tuple[list[Candidate
         options.append({"action": c.action_id, "tool": c.tool, "cost": c.cost, "noise": c.noise, "resolves": c.resolves, "decision": d, "why": c.why})
     rationale = chosen[0].why if chosen else "No further runnable actions."
     return chosen, rationale, options
+
+
+_SECRET_RX = [re.compile(r"(?i)\b(authorization|set-cookie|cookie|x-api-key)\s*[:=]\s*[^\r\n]+"),
+              re.compile(r"(?i)\b(password|passwd|pwd|secret|token|api[_-]?key)\b\s*[:=]\s*\S+"),
+              re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{8,}"), re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]*")]
+
+
+def redact(text: str) -> str:
+    """Remove credentials/tokens before anything leaves the machine (only used on the optional Claude path)."""
+    for rx in _SECRET_RX:
+        text = rx.sub("[REDACTED]", text)
+    return text
 
 
 def llm_choose(summary: dict, cands: list[Candidate]) -> tuple[str, str] | None:

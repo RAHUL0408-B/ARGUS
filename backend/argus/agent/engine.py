@@ -6,7 +6,7 @@ from __future__ import annotations
 import re, threading, uuid
 from typing import Optional
 from pydantic import BaseModel
-from .. import config, correlation, graph, risk, runner, scope as scopemod, store
+from .. import config, correlation, graph, grounding, risk, runner, scope as scopemod, store
 from ..adapters import ADAPTERS
 from ..adapters.base import AdapterResult
 from ..adapters.nmap import build_scan_cmd, is_http
@@ -240,6 +240,7 @@ def execute(aid: str, c: Candidate, actor: str = "agent") -> Optional[AdapterRes
         _coverage_gap(aid, c, f"timeout ({ex})"); _record_action(aid, c.action_id, "failed"); return None
     except Exception as ex:
         _coverage_gap(aid, c, f"{ex.__class__.__name__}: {str(ex)[:160]}"); _record_action(aid, c.action_id, "failed"); return None
+    _drop_out_of_scope(aid, a, c, res)
     n_assets = _save_assets(aid, res)
     touched, created, merged = correlation.ingest(aid, res.findings) if res.findings else ([], 0, 0)
     _record_action(aid, c.action_id, "ok")
@@ -249,6 +250,24 @@ def execute(aid: str, c: Candidate, actor: str = "agent") -> Optional[AdapterRes
     for n in res.notes:
         log(aid, "info", n)
     return res
+
+
+def _drop_out_of_scope(aid: str, a: Assessment, c: Candidate, res: AdapterResult) -> None:
+    """Crawlers (ZAP spider) can discover links to other hosts. Anything outside the authorized scope is discarded and recorded."""
+    bad = sorted({f.asset.host for f in res.findings if not scopemod.check_target(a.scope, f.asset.host).allowed} |
+                 {o.asset.host for o in res.observations if not scopemod.check_target(a.scope, o.asset.host).allowed})
+    if not bad:
+        return
+    n = len(res.findings)
+    res.findings = [f for f in res.findings if f.asset.host not in bad]
+    res.observations = [o for o in res.observations if o.asset.host not in bad]
+    msg = f"{c.tool} results for out-of-scope host(s) {', '.join(bad)} were discarded ({n - len(res.findings)} finding(s))."
+    a = store.get("assessment", aid, Assessment)
+    if msg not in a.limitations:
+        a.limitations.append(msg)
+        store.put("assessment", a)
+    store.audit(aid, "scope-guard", "result.dropped", {"action": c.action_id, "hosts": bad})
+    log(aid, "scope", f"DISCARDED results for out-of-scope host(s) {', '.join(bad)}", allowed=False)
 
 
 def _dispatch(aid: str, c: Candidate, job: Job, scope: Scope) -> AdapterResult:
@@ -358,6 +377,12 @@ def _loop(aid: str) -> None:
                    "open_hypotheses": [h.text for h in store.list_("hypothesis", Hypothesis, aid) if h.status == "open"][:15]}
         pick = planner.llm_choose(summary, cands)
         if pick:
+            ok_g, probs = grounding.validate(aid, pick[1], require_citation=False)
+            if not ok_g:       # model text mentioned a CVE/score no tool reported: discard it, keep the rule choice
+                store.audit(aid, "grounding", "llm.rationale.rejected", {"problems": probs})
+                log(aid, "error", "Claude's rationale failed the grounding check and was discarded: " + "; ".join(probs))
+                pick = None
+        if pick:
             by_id = {c.action_id: c for c in runnable}
             chosen, rationale, planner_name = [by_id[pick[0]]], pick[1], "claude"
             for o in options:
@@ -416,7 +441,7 @@ def finalize(aid: str) -> None:
     a = store.get("assessment", aid, Assessment)
     correlation.link_related(aid)
     g = graph.build(aid)
-    ranked = risk.rank(aid, path_bonus=g["path_bonus"])
+    ranked = risk.rank(aid, criticality=a.criticality, path_bonus=g["path_bonus"])
     log(aid, "phase", f"Correlation and risk ranking complete: {len([f for f in ranked if not f.risk.get('excluded')])} active findings, "
                       f"{len([f for f in ranked if f.risk.get('excluded')])} refuted.")
     _propose_approvals(aid)
@@ -548,6 +573,18 @@ def import_file(aid: str, tool: str, filename: str, content: bytes, analyst: str
     return {"created": created, "merged": merged, "dropped": len(dropped), "mode": "import"}
 
 
+def set_criticality(aid: str, host: str, value: float, analyst: str = "analyst") -> dict:
+    if value not in (0.8, 1.0, 1.2):
+        raise ValueError("criticality must be 0.8 (low), 1.0 (normal) or 1.2 (critical)")
+    a = store.get("assessment", aid, Assessment)
+    a.criticality[host] = value
+    store.put("assessment", a)
+    store.audit(aid, analyst, "criticality.set", {"host": host, "value": value})
+    g = graph.build(aid)
+    risk.rank(aid, criticality=a.criticality, path_bonus=g["path_bonus"])
+    return {"host": host, "value": value}
+
+
 # ------------------------------------------------------------------ retest
 def retest(aid: str, finding_id: str, analyst: str = "analyst") -> dict:
     f = store.get("finding", finding_id, Finding, aid)
@@ -569,19 +606,28 @@ def retest(aid: str, finding_id: str, analyst: str = "analyst") -> dict:
         f.status, f.refuted_reason = "fixed", v.reason
         f.confidence_reasons.append(f"retest: no longer reproducible: {v.reason}")
     elif v.verdict == "confirmed":
-        f.status = "validated" if before != "refuted" else "validated"
+        f.status = "validated"
         f.confidence = max(f.confidence, 90)
         f.confidence_reasons.append(f"retest: still present: {v.reason}")
     f.evidence_ids.append(ev.id)
     runner.finish_ok(job, ev.id)
     store.put("finding", f)
     store.audit(aid, analyst, "retest", {"finding": f.id, "before": before, "after": f.status, "verdict": v.verdict})
-    risk.rank(aid)
+    risk.rank(aid, criticality=a.criticality, path_bonus=graph.build(aid)["path_bonus"])
     return {"finding": f.id, "before": before, "after": f.status, "verdict": v.verdict, "reason": v.reason, "evidence": ev.id}
 
 
 # ------------------------------------------------------------------ analyst copilot (grounded in stored data)
 def ask(aid: str, question: str) -> dict:
+    out = _ask(aid, question)
+    ok, probs = grounding.validate(aid, out["answer"], require_citation=False)
+    if not ok:
+        store.audit(aid, "grounding", "copilot.answer.rejected", {"problems": probs})
+        return {"answer": "I could not give a grounded answer: " + "; ".join(probs), "cites": []}
+    return out
+
+
+def _ask(aid: str, question: str) -> dict:
     q = question.lower()
     fs = store.list_("finding", Finding, aid)
     m = re.search(r"f-\d{3}", q)

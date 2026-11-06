@@ -183,6 +183,21 @@ def retest(aid: str, fid: str):
         raise HTTPException(400, str(ex))
 
 
+class CritReq(BaseModel):
+    host: str
+    value: float
+    analyst: str = "analyst"
+
+
+@app.post("/api/assessments/{aid}/criticality")
+def criticality(aid: str, req: CritReq):
+    _a(aid)
+    try:
+        return engine.set_criticality(aid, req.host, req.value, req.analyst)
+    except ValueError as ex:
+        raise HTTPException(400, str(ex))
+
+
 @app.post("/api/assessments/{aid}/ask")
 def ask(aid: str, req: AskReq):
     return engine.ask(aid, req.question)

@@ -186,3 +186,4 @@ class Assessment(BaseModel):
     planner: str = "rules"
     limitations: list[str] = Field(default_factory=list)
     intents: dict[str, Any] = Field(default_factory=dict)
+    criticality: dict[str, float] = Field(default_factory=dict)   # host -> asset criticality multiplier set by the analyst
