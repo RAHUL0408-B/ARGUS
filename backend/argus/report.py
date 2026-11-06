@@ -182,7 +182,8 @@ def build_pdf(aid: str) -> bytes:
             ["Priority", f"{r.get('priority', '-')} (rank {r.get('rank', '-')})" if r else "-"]], [38 * mm, 132 * mm], st, header=False)
         obs = _p("<b>OBSERVED (tool evidence):</b> " + _e(f.description[:700]) + "<br/>Reported by: " +
                  ", ".join(f"{_e(o.tool)} ({'LIVE' if o.mode == 'live' else 'IMPORT'}) [{_e(o.evidence_id)}] rule {_e(o.rule_id or 'n/a')}" for o in f.occurrences), st["s"])
-        ana = _p("<b>ANALYSIS (rule-based inference):</b> Confidence reasons: " + _e(" | ".join(f.confidence_reasons) or "n/a") +
+        rt = ("<br/>Retest history: " + _e("; ".join(f"{x['at'][:19]} {x['before']} -> {x['after']} ({x['verdict']}) [{x['evidence_id']}]" for x in f.retests))) if f.retests else ""
+        ana = _p("<b>ANALYSIS (rule-based inference):</b> Confidence reasons: " + _e(" | ".join(f.confidence_reasons) or "n/a") + rt +
                  ("<br/>Risk factors: " + _e(f"base {fac.get('base')} ({fac.get('base_source')}); exploitability x{fac.get('exploitability')} ({fac.get('exploitability_source')}); confidence weight x{fac.get('confidence_weight')}") if fac else ""), st["s"])
         story.append(KeepTogether([head, meta, Spacer(1, 2), obs, Spacer(1, 2), ana, Spacer(1, 4)]))
 

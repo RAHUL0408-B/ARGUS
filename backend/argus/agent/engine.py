@@ -267,7 +267,7 @@ def _drop_out_of_scope(aid: str, a: Assessment, c: Candidate, res: AdapterResult
         a.limitations.append(msg)
         store.put("assessment", a)
     store.audit(aid, "scope-guard", "result.dropped", {"action": c.action_id, "hosts": bad})
-    log(aid, "scope", f"DISCARDED results for out-of-scope host(s) {', '.join(bad)}", allowed=False)
+    log(aid, "info", f"DISCARDED results for out-of-scope host(s) {', '.join(bad)}")
 
 
 def _dispatch(aid: str, c: Candidate, job: Job, scope: Scope) -> AdapterResult:
@@ -335,8 +335,11 @@ def _msf(aid: str, job: Job, c: Candidate) -> AdapterResult:
     ev = res.evidence[0]
     text = (config.DATA_DIR / ev.file_path).read_text(errors="replace")
     ver = f.asset.version or next((x.version for x in _assets(aid) if x.host == f.asset.host and x.port == f.asset.port and x.version), "")
-    if ver and ver in text:
+    version_relevant = f.issue_key in ("server-disclosure", "outdated-software") or f.issue_key.startswith("cve:") or bool(f.cve)
+    if ver and ver in text and version_relevant:
         correlation.apply_validation(f, "confirmed", f"read-only module re-read version '{ver}' from the live service", ev.id, "metasploit-aux")
+    elif ver and ver in text:
+        correlation.apply_validation(f, "inconclusive", f"module re-read the server version '{ver}', but that does not prove a '{f.issue_key}' weakness", ev.id, "metasploit-aux")
     else:
         correlation.apply_validation(f, "inconclusive", "module output did not reproduce the version string", ev.id, "metasploit-aux")
     store.put("finding", f)
@@ -610,6 +613,7 @@ def retest(aid: str, finding_id: str, analyst: str = "analyst") -> dict:
         f.confidence = max(f.confidence, 90)
         f.confidence_reasons.append(f"retest: still present: {v.reason}")
     f.evidence_ids.append(ev.id)
+    f.retests.append({"at": now(), "before": before, "after": f.status, "verdict": v.verdict, "reason": v.reason, "evidence_id": ev.id})
     runner.finish_ok(job, ev.id)
     store.put("finding", f)
     store.audit(aid, analyst, "retest", {"finding": f.id, "before": before, "after": f.status, "verdict": v.verdict})

@@ -99,6 +99,7 @@ class Finding(BaseModel):
     references: list[str] = Field(default_factory=list)
     inferences: list[Inference] = Field(default_factory=list)
     refuted_reason: str = ""
+    retests: list[dict[str, Any]] = Field(default_factory=list)   # history: {at, before, after, verdict, reason, evidence_id}
     created_at: str = Field(default_factory=now)
 
 

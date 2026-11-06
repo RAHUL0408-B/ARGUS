@@ -270,7 +270,8 @@ function detail(id, quiet) {
     <div class="small"><b>Why ${f.confidence}/100:</b><br>${f.confidence_reasons.map(esc).join("<br>")}</div>
     ${fac.base !== undefined ? `<div class="small"><b>Priority ${esc(r.priority)}</b> = base ${esc(fac.base)} (${esc(fac.base_source)}) x exploit ${esc(fac.exploitability)} (${esc(fac.exploitability_source)}) x confidence ${esc(fac.confidence_weight)}${fac.path_bonus ? " + attack-path bonus " + fac.path_bonus : ""}</div>` : `<div class="small">${esc(r.reason || "")}</div>`}
     ${f.validation && f.validation.verdict ? `<div class="small"><b>Double-check:</b> ${esc(f.validation.verdict)} by ${esc(f.validation.by)} - ${esc(f.validation.reason)}</div>` : ""}
-    <div class="small"><b>How to fix:</b> ${esc(f.remediation || "n/a")}</div></div></div>
+    <div class="small"><b>How to fix:</b> ${esc(f.remediation || "n/a")}</div>
+    ${(f.retests || []).length ? `<div class="small"><b>Retest history:</b><br>${f.retests.map(r => `${esc(r.at.slice(0, 19))}: ${esc(r.before)} &rarr; <b>${esc(r.after)}</b> (${esc(r.verdict)}) ${esc(r.reason)} ${evLink(r.evidence_id)}`).join("<br>")}</div>` : ""}</div></div>
   <div class="row small">Asset criticality for ${esc(f.asset.host)}: <select id="crit" onchange="setCrit('${esc(f.asset.host)}', this.value)">${[["0.8", "low"], ["1", "normal"], ["1.2", "critical"]].map(o => `<option value="${o[0]}" ${(state.assessment.criticality || {})[f.asset.host] == o[0] || (!(state.assessment.criticality || {})[f.asset.host] && o[0] === "1") ? "selected" : ""}>${o[1]}</option>`).join("")}</select> ${help("Business importance of this host. Multiplies the priority score (0.8 / 1.0 / 1.2).")}</div>
   <div class="row"><button class="sm" onclick="retest('${esc(f.id)}')">Retest (after fixing)</button> <button class="sm" onclick="proposeVal('${esc(f.id)}')">Ask for Metasploit check (needs approval)</button></div></div>`;
   if (!quiet) box.scrollIntoView({ behavior: "smooth" });

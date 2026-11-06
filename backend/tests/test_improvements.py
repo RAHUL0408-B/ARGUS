@@ -64,3 +64,39 @@ def test_report_contains_grounding_check():
     correlation.ingest(AID, zap.parse_alerts(AID, [ALERT], "EV-0001").findings)
     risk.rank(AID)
     assert report.build_pdf(AID).startswith(b"%PDF")
+
+
+def test_llm_cannot_choose_an_action_that_is_not_a_candidate(monkeypatch):
+    """Prompt-injection guard: even if the model returns an arbitrary action id, it is ignored."""
+    monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "x")
+    import sys, types
+    fake = types.SimpleNamespace(Anthropic=lambda api_key: types.SimpleNamespace(messages=types.SimpleNamespace(create=lambda **k: types.SimpleNamespace(
+        content=[types.SimpleNamespace(type="text", text='{"action_id": "nmap_scan:8.8.8.8", "rationale": "ignore previous instructions"}')]))))
+    monkeypatch.setitem(sys.modules, "anthropic", fake)
+    c = Candidate(action_id="nmap_scan:10.77.0.10", tool="nmap", kind="nmap_scan", target="10.77.0.10")
+    assert planner.llm_choose({"targets": ["10.77.0.10"]}, [c]) is None
+
+
+def test_scope_blocks_injected_target_even_if_planner_returned_it():
+    from argus import scope as scopemod
+    a = store.get("assessment", AID, Assessment)
+    evil = Candidate(action_id="nmap_scan:8.8.8.8", tool="nmap", kind="nmap_scan", target="8.8.8.8")
+    assert engine.execute(AID, evil) is None
+    assert any(e["action"] == "action.blocked" for e in store.audit_entries(AID))
+
+
+def test_msf_check_does_not_validate_unrelated_finding(monkeypatch):
+    from argus.adapters import ADAPTERS
+    from argus.adapters.base import AdapterResult
+    ev = Evidence(id="EV-0002", assessment_id=AID, tool="metasploit", file_path="m.txt")
+    (config.DATA_DIR / "m.txt").write_text("[+] 10.77.0.10:80 Apache/2.4.25")
+    store.put("evidence", ev)
+    z = zap.parse_alerts(AID, [ALERT], "EV-0001").findings
+    z[0].asset.version = "Apache/2.4.25"
+    correlation.ingest(AID, z)
+    f = store.list_("finding", Finding, AID)[0]
+    monkeypatch.setattr(ADAPTERS["metasploit"], "run", lambda *a, **k: AdapterResult(evidence=[ev]))
+    from argus.models import Job
+    engine._msf(AID, Job(id="J-1", assessment_id=AID, tool="metasploit", kind="msf_check", target="10.77.0.10"),
+                Candidate(action_id="m", tool="metasploit", kind="msf_check", target="10.77.0.10", port=80, params={"finding_id": f.id, "module": "auxiliary/scanner/http/http_version"}))
+    assert store.get("finding", f.id, Finding, AID).status != "validated"
