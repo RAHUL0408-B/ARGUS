@@ -309,6 +309,7 @@ Requirements: Windows 10/11 (Linux/macOS work too), Docker Desktop with ~6 GB fr
 | "REPLAY" demo mode | Not implemented | Missing (not needed if live) |
 | Retest "diff" view | Retest shows before/after status for validatable classes only | Partial |
 | Redirect/out-of-scope link dropping from crawlers | All tool results are now filtered by scope; discarded hosts are logged as limitations and audited | Fixed |
+| ZAP active scan actually reaching DVWA's vulnerable pages | ZAP never fills in a login form on its own, so an unauthenticated scan only ever found `login.php`. `lab_init` now logs in to DVWA and registers the session as a ZAP Replacer rule so the spider and active scan ride an authenticated session | Fixed (lab-setup fix, not a code change to ARGUS itself) |
 
 ---
 
