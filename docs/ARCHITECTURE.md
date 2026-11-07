@@ -35,6 +35,19 @@
 | `grounding.py` | Rejects unknown evidence ids, unseen CVEs and unreported CVSS values. |
 | `report.py` | reportlab PDF (sections 7.1-7.6 plus appendices). |
 
+## AI model(s)
+
+- **Default (always on): a deterministic rule-based planner.** `agent/planner.py` generates every candidate action from code (never from a model), then `rule_choose` picks the earliest-phase, cheapest, most-hypothesis-resolving candidate and writes a plain-text reason for every option considered, not just the winner. This is what satisfies "explain the rationale behind its next steps" (brief section 5.2) with zero dependency on an external API, zero cost, and fully reproducible decisions.
+- **Optional: an LLM ranking layer** (`llm_choose`). When an API key is set, the model sees the same code-generated candidate list the rule planner sees — it can only pick one of those candidates, never invent an action — and writes a short rationale. That rationale is passed through `grounding.validate()` before being shown anywhere; if it cites anything not in the evidence it is discarded and the rule planner's reasoning is used instead. State is redacted (`planner.redact`) before leaving the machine: credentials, cookies, tokens and bearer/JWT patterns are stripped from the prompt.
+- No model is ever allowed to choose, invent, or execute a tool action directly - only to rank options code already generated and explain the choice.
+
+## State & memory
+
+- **Per-assessment state** lives in SQLite (`store.py`): a generic JSON object store (assets, findings, hypotheses, jobs, approvals, evidence), a hash-chained audit table, and an events table that feeds the UI's live activity feed over SSE.
+- **Working memory for the next decision** is reconstructed each loop iteration from that same state, not kept in a separate in-process cache: assets discovered so far, findings and their status/confidence, open hypotheses, what has already run (`done`/`failed` action ids) - so the agent never repeats a completed action and can resume correctly after a server restart (state is durable on disk, not in memory).
+- **Retest history** is appended per finding (`Finding.retests`), so a finding's status over time (observed -> validated, or reopened on retest) is itself part of its persisted state, not reconstructed from the audit log.
+- **No chat/conversation memory** beyond a given assessment: each assessment is independent; the copilot (`ask`) answers are generated fresh from current state each call, not from prior turns.
+
 ## Confidence Ledger
 
 +40 tool test or rule, +25 version-only, +50 directly observed open service, +15 version in affected range, +15 request/response evidence, +25 for the second independent tool and +10 for each further tool, -5 import-only, -30 distro backport. Validated findings have a floor of 90; refuted findings are capped at 10. Reasons are stored with the score.
