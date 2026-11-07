@@ -8,12 +8,12 @@ The UI **Tools** tab (`GET /api/matrix`) probes this at runtime.
 |---|---|---|---|
 | nmap | **Live** | `docker exec argus-tools nmap` for service discovery (`-sV`) and NSE http enumeration; XML parsed. | No `vulners` script. CVE hints come only from a small reference table (`KNOWN_VULNERABLE_VERSIONS`) and are labelled version-only. |
 | Nikto | **Live** | Run in `argus-tools` (cloned from upstream), JSON output parsed. | Reports no CVSS or severity. ARGUS derives a coarse severity from the message and marks it derived. |
-| OWASP ZAP | **Live** | ZAP daemon API (spider plus passive scan; active scan only after approval, capped at 4 minutes). | No CVSS from ZAP, none invented. Alert fetch capped at 500. |
-| Metasploit | **Live, approval-gated** | `docker run metasploitframework/metasploit-framework ./msfconsole -x "use <module>; ..."` for allow-listed **read-only auxiliary** modules (http_version, http_header, options, robots_txt, ftp_version, ssh_version). | No exploit modules, no payloads, never autonomous. Large image. |
+| OWASP ZAP | **Live** | ZAP daemon API (spider plus passive scan; active scan only after approval, restricted to SQLi + reflected/persistent-XSS scanners, capped at 4 minutes). | No CVSS from ZAP, none invented. Alert fetch capped at 500. Verified live: finds real SQL Injection/XSS on the lab's DVWA target. |
+| Metasploit | **Live, approval-gated** | `docker run metasploitframework/metasploit-framework ./msfconsole -x "use <module>; ..."` for allow-listed **read-only auxiliary** modules (http_version, http_header, options, robots_txt, ftp_version, ssh_version). | No exploit modules, no payloads, never autonomous. Large image. Confirms a finding only when it is version-related AND the module output reproduces the version string. |
 | Nessus | **Import-only** | Parses `.nessus` XML exports. Hosts outside scope are dropped. Informational plugins are context. | Commercial product. No live API is implemented or claimed. |
 | Burp Suite | **Import-only** | Parses Burp XML issue exports. | Burp Pro REST API is **Planned**, not implemented. |
 | OpenVAS / GVM | **Import-only** | Parses OpenVAS XML reports. | Live GMP integration is **Planned**. |
-| Claude planner | **Optional, untested** | Ranks code-generated candidates when `ANTHROPIC_API_KEY` is set; falls back to rules. | No API key was available to the team, so this path has not been run. |
+| AI planner (Gemini / Claude) | **Optional; Gemini verified live** | Ranks code-generated candidates and writes the rationale when `GEMINI_API_KEY` (tried first) or `ANTHROPIC_API_KEY` is set; falls back to rules on any error. Never invents an action. | Gemini (`gemini-flash-lite-latest`) run live end-to-end: produced genuinely contextual rationale, not generic text. Claude path is unit-tested only (no key available to the team). Not one of the 7 named tools - this is the planning layer, separate from the tool adapters above. |
 | Exploit frameworks (beyond read-only checks) | **Unsupported** | - | By design. |
 
 ## Notes on samples

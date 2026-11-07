@@ -407,6 +407,7 @@ This section maps directly to the organizers' actual problem statement and the 1
 8. **Robustness**: restart recovery, partial ZAP results, clean 504 on retest timeout, coverage-gap reporting, ZAP-killed-mid-scan recovery.
 9. **A real injection finding, not a staged one**: the live ZAP active scan (after the DVWA auth fix) genuinely finds SQL Injection and reflected XSS on DVWA from scratch, with the request/response evidence saved and hashed - this can be re-run live in front of judges.
 10. **Debugged with real evidence, not guesswork**: the DVWA active-scan fix is a good "how we actually debug" story for Q&A - traced with ZAP's own `sendRequest` API to prove the auth cookie genuinely wasn't being sent, not assumed.
+11. **Genuinely adaptive, not just rule-following, with the LLM enabled**: with Gemini active, the agent chose to fully investigate one host (recon -> enumeration -> analysis -> triage) before starting the next, instead of the rule planner's breadth-first "every host's recon, then every host's enumeration..." order. That's real adaptive, context-driven sequencing - directly what the brief's "AI Reasoning & Decisions" (20/100 pts, the single biggest category) and the "Multi-step adaptive replanning" bonus feature ask for, and it only shows up once a real model is choosing.
 
 ## 15. Known weaknesses / risks
 - The Gemini planner path is **verified live** (real assessment, real contextual rationale, confirmed in the decision log). The Claude path remains unit-tested only (no Anthropic key available).

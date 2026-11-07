@@ -50,7 +50,7 @@ const PRESETS = [
 async function init() {
   health = await api("/health");
   $("#badges").innerHTML = `<span class="badge ${health.docker ? "ok" : "bad"}">Docker ${health.docker ? "ready" : "not available"}</span>
-    <span class="badge" title="Rules-only means ARGUS uses its built-in planner. Set ANTHROPIC_API_KEY to let Claude choose steps.">Planner: ${esc(health.llm)}</span>
+    <span class="badge" title="Rules-only means ARGUS uses its built-in deterministic planner. Set GEMINI_API_KEY or ANTHROPIC_API_KEY to let that model rank the same candidates and write the rationale.">Planner: ${esc(health.llm)}</span>
     <span class="badge ${health.audit_chain_ok ? "ok" : "bad"}">Audit log ${health.audit_chain_ok ? "intact" : "BROKEN"}</span>`;
   const sc = await api("/scope/default");
   $("#scopeBox").innerHTML = `<b>Allowed:</b> ${sc.targets.map(esc).join(", ")}<br><b>Never touched:</b> ${sc.exclusions.map(esc).join(", ")}<br><b>Highest action level:</b> ${esc(sc.max_intensity)} (needs approval)<br><b>Authorized by:</b> ${esc(sc.authorized_by)}`;
