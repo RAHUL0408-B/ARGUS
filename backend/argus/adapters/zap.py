@@ -79,14 +79,18 @@ class ZapAdapter(Adapter):
                 # every discovered URL instead of mostly on unrelated checks that never finish in time.
                 try:
                     self._get("/JSON/ascan/action/disableAllScanners/")
-                    # SQL injection (40018-22, 40027) + reflected/persistent XSS (40012/40014). DOM-based XSS
-                    # (40026) is deliberately excluded: it drives a headless browser engine per page and OOM-
-                    # killed the ZAP container in this lab's memory budget; reflected/persistent coverage is
-                    # enough to confirm the "xss" issue class. ZAP rejects the whole enableScanners call (400
-                    # does_not_exist) if ANY id in the list doesn't exist in this ZAP version, which would
-                    # otherwise leave 0 scanners enabled and turn the active scan into a silent no-op --
+                    # SQL injection (40018, generic error/response-based) + reflected/persistent XSS
+                    # (40012/40014). Deliberately excludes: DOM-based XSS (40026) -- drives a headless
+                    # browser engine per page and OOM-killed the ZAP container in this lab's memory budget;
+                    # and every *time-based* SQLi variant (40019-22, 40027, MySQL/Hypersonic/Oracle/
+                    # PostgreSQL/MsSQL) -- those scanners deliberately send sleep-delay payloads and wait
+                    # for the response, which intermittently ate the whole 4-minute budget depending on scan
+                    # order, causing the active scan to sometimes finish with zero findings. 40018 alone
+                    # already catches DVWA's classic (non-blind) SQLi. ZAP rejects the whole enableScanners
+                    # call (400 does_not_exist) if ANY id in the list doesn't exist in this ZAP version,
+                    # which would otherwise leave 0 scanners enabled and turn the scan into a silent no-op --
                     # verify the ids are real before relying on them.
-                    self._get("/JSON/ascan/action/enableScanners/", ids="40018,40019,40020,40021,40022,40027,40012,40014")
+                    self._get("/JSON/ascan/action/enableScanners/", ids="40018,40012,40014")
                     on = self._get("/JSON/ascan/view/scanners/").get("scanners", [])
                     if not any(s.get("enabled") == "true" for s in on):
                         self._get("/JSON/ascan/action/enableAllScanners/")   # fall back rather than scan with nothing enabled

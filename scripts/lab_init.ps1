@@ -1,13 +1,17 @@
 # One-time lab setup for a fresh stack:
 #  1. DVWA has no DB yet (every page redirects to setup) -> create it.
 #  2. Log in to DVWA and confirm security=low (DVWA's own default).
-#  3. Register that session with ZAP as an HTTP Session, so ZAP's spider/active scan (which
-#     never fills in a login form on its own) rides an authenticated session and actually
-#     reaches /vulnerabilities/* instead of bouncing off login.php. A ZAP Replacer rule looked
-#     like the right tool here but only REPLACES an existing Cookie header -- it never ADDS one,
-#     so it silently did nothing on a fresh ZAP instance with no cookies of its own yet.
-#     ZAP's httpSessions API is the one built to force cookies onto every request regardless.
-# Safe to re-run: it only resets the lab DB and refreshes the ZAP session.
+#  3. Register the DVWA login as a ZAP HTTP Session, so ZAP's spider/active scan (which never
+#     fills in a login form on its own) rides an authenticated session and actually reaches
+#     /vulnerabilities/* instead of bouncing off login.php. A ZAP Replacer rule looks like the
+#     right tool but only REPLACES a Cookie header that already exists -- it never ADDS one, so
+#     it silently did nothing on a fresh ZAP daemon. httpSessions is the API actually built to
+#     force cookies onto every request. (A `core/newSession` reset was tried here too, on the
+#     theory that ZAP's spider might remember an earlier unauthenticated crawl of the same host
+#     and not revisit it -- testing showed that theory was wrong and the reset actively broke
+#     httpSessions instead, so it was removed. If a stale crawl is ever suspected, open ZAP's
+#     own UI/API and clear the Sites tree for the host manually, then re-run this script.)
+# Safe to re-run: it only resets the lab DB and ZAP's own session state, never DVWA/Juice Shop data.
 $script = @'
 J=/tmp/dvwa.jar; rm -f $J
 T=$(curl -s -c $J http://10.77.0.10/setup.php | sed -n "s/.*user_token. value=.\([a-f0-9]*\).*/\1/p" | head -1)
