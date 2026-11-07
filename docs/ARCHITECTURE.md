@@ -67,5 +67,5 @@
 | React front end | Vanilla JS single page, no build step | Faster to ship and nothing to install |
 | WeasyPrint PDF | reportlab | WeasyPrint needs GTK libraries on Windows |
 | OpenVAS live (GMP) | Import-only | Greenbone feed sync is heavy; labelled Import-only |
-| Claude-driven planning | Rule planner default, Claude optional | No API key available; Claude path untested |
+| Claude-driven planning | Rule planner default; optional Gemini (preferred, free tier) or Claude ranks the same code-generated candidates | Gemini/Claude never invent an action, only rank and explain |
 | Scope: whole lab subnet | Subnet minus .1/.2/.3 | An early run reached the Docker gateway (the developer's PC); fixed |

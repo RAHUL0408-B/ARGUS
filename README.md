@@ -66,9 +66,9 @@ Deep link: `http://localhost:8765/?a=<assessment id>&tab=findings`.
 
 ## AI planner
 
-- Default: a deterministic **rule planner** picks among candidate actions that code generated from the current state. No API key is required.
-- Optional: set `ANTHROPIC_API_KEY` and Claude ranks the same candidates and writes the rationale. Its answer is validated against the candidate list and falls back to the rules on any problem. This path is written but **not tested** (no key was available).
-- The model never executes anything and never sees raw credentials. Confidential data is not sent anywhere in rules-only mode.
+- Default: a deterministic **rule planner** picks among candidate actions that code generated from the current state, and writes a plain-text reason for every option it considered. No API key is required, and this alone satisfies "explain the rationale behind its next steps" with zero external dependency.
+- Optional LLM ranking layer: set `GEMINI_API_KEY` (Google AI Studio, free tier) or `ANTHROPIC_API_KEY` (Claude) and the model ranks the same code-generated candidates and writes the rationale -- it can only pick an action the rule planner already generated, never invent one. If both keys are set, Gemini is tried first. Its answer is validated against the candidate list and against the grounding check (no uncited CVE/CVSS) and falls back to the rule planner on any problem.
+- The model never executes anything and never sees raw credentials or tokens (`planner.redact` strips them from the prompt first). Confidential data is not sent anywhere in rules-only mode.
 
 ## Integration status (truthful)
 
@@ -78,7 +78,7 @@ See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md). Summary: nmap, Nikto, OWASP ZA
 
 ```powershell
 cd backend
-python -m pytest -q      # 32 tests: scope guard, audit chain, parsers, correlation, risk, grounding, report, robustness, out-of-scope filtering, criticality, redaction, retest history
+python -m pytest -q      # 34 tests: scope guard, audit chain, parsers, correlation, risk, grounding, report, robustness, out-of-scope filtering, criticality, redaction, retest history, LLM candidate-injection guard (Claude + Gemini)
 cd ..
 python scripts\e2e_live.py           # live end-to-end suite against the lab (server + lab must be running)
 python scripts\make_test_report.py    # builds docs/ARGUS_Test_Report.pdf from the results

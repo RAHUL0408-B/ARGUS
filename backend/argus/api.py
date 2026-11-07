@@ -59,7 +59,8 @@ def _a(aid: str) -> Assessment:
 @app.get("/api/health")
 def health():
     ok, bad = store.verify_audit()
-    return {"ok": True, "llm": "claude" if config.ANTHROPIC_API_KEY else "rules-only (no API key set)", "docker": runner.docker_available(), "audit_chain_ok": ok}
+    llm = config.llm_provider_name()
+    return {"ok": True, "llm": llm if llm != "rules-only" else "rules-only (no API key set)", "docker": runner.docker_available(), "audit_chain_ok": ok}
 
 
 @app.get("/api/matrix")

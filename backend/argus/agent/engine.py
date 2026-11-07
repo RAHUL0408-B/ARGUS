@@ -52,7 +52,7 @@ def create_assessment(request: str, scope: Scope, title: str = "") -> Assessment
     aid = f"A-{uuid.uuid4().hex[:8]}"
     requested, intents = parse_request(request)
     a = Assessment(id=aid, title=title or f"Assessment {aid}", request=request, scope=scope, intents=intents,
-                   planner="claude" if config.ANTHROPIC_API_KEY else "rules")
+                   planner=config.llm_provider_name() if config.llm_provider_name() != "rules-only" else "rules")
     store.put("assessment", a)
     store.audit(aid, "analyst", "assessment.create", {"request": request, "scope": scope.model_dump()})
     log(aid, "phase", "Assessment created. Validating requested targets against the registered scope.")
@@ -378,18 +378,19 @@ def _loop(aid: str) -> None:
         summary = {"targets": a.targets, "services": [f"{x.host}:{x.port} {x.service} {x.product} {x.version}".strip() for x in assets if x.port][:30],
                    "findings": [f"{f.id} {f.issue_key} {f.severity} {f.status}" for f in findings][:40],
                    "open_hypotheses": [h.text for h in store.list_("hypothesis", Hypothesis, aid) if h.status == "open"][:15]}
+        provider = config.llm_provider_name()
         pick = planner.llm_choose(summary, cands)
         if pick:
             ok_g, probs = grounding.validate(aid, pick[1], require_citation=False)
             if not ok_g:       # model text mentioned a CVE/score no tool reported: discard it, keep the rule choice
                 store.audit(aid, "grounding", "llm.rationale.rejected", {"problems": probs})
-                log(aid, "error", "Claude's rationale failed the grounding check and was discarded: " + "; ".join(probs))
+                log(aid, "error", f"{provider}'s rationale failed the grounding check and was discarded: " + "; ".join(probs))
                 pick = None
         if pick:
             by_id = {c.action_id: c for c in runnable}
-            chosen, rationale, planner_name = [by_id[pick[0]]], pick[1], "claude"
+            chosen, rationale, planner_name = [by_id[pick[0]]], pick[1], provider
             for o in options:
-                o["decision"] = "CHOSEN by Claude" if o["action"] == pick[0] else o["decision"].replace("CHOSEN: ", "deferred: ")
+                o["decision"] = f"CHOSEN by {provider}" if o["action"] == pick[0] else o["decision"].replace("CHOSEN: ", "deferred: ")
         c = chosen[0]
         a.phase = planner.PHASE_NAME.get(c.kind, a.phase)
         store.put("assessment", a)

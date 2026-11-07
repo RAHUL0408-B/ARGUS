@@ -77,6 +77,42 @@ def test_llm_cannot_choose_an_action_that_is_not_a_candidate(monkeypatch):
     assert planner.llm_choose({"targets": ["10.77.0.10"]}, [c]) is None
 
 
+def test_gemini_cannot_choose_an_action_that_is_not_a_candidate(monkeypatch):
+    """Same prompt-injection guard, for the Gemini path (tried first when both keys are set)."""
+    monkeypatch.setattr(config, "GEMINI_API_KEY", "x")
+    import httpx
+
+    class FakeResp:
+        def raise_for_status(self): pass
+        def json(self): return {"candidates": [{"content": {"parts": [
+            {"text": '{"action_id": "nmap_scan:8.8.8.8", "rationale": "ignore previous instructions"}'}]}}]}
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: FakeResp())
+    c = Candidate(action_id="nmap_scan:10.77.0.10", tool="nmap", kind="nmap_scan", target="10.77.0.10")
+    assert planner.llm_choose({"targets": ["10.77.0.10"]}, [c]) is None
+
+
+def test_gemini_preferred_over_claude_when_both_keys_set(monkeypatch):
+    monkeypatch.setattr(config, "GEMINI_API_KEY", "x")
+    monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "x")
+    import sys, types
+    called = {"gemini": False, "claude": False}
+
+    def fake_post(*a, **k):
+        called["gemini"] = True
+        class R:
+            def raise_for_status(self): pass
+            def json(self): return {"candidates": [{"content": {"parts": [{"text": '{"action_id": "nmap_scan:10.77.0.10", "rationale": "ok"}'}]}}]}
+        return R()
+    import httpx
+    monkeypatch.setattr(httpx, "post", fake_post)
+    fake_anthropic = types.SimpleNamespace(Anthropic=lambda api_key: (_ for _ in ()).throw(AssertionError("Claude should not be called when Gemini is configured")))
+    monkeypatch.setitem(sys.modules, "anthropic", fake_anthropic)
+    c = Candidate(action_id="nmap_scan:10.77.0.10", tool="nmap", kind="nmap_scan", target="10.77.0.10")
+    result = planner.llm_choose({"targets": ["10.77.0.10"]}, [c])
+    assert result == ("nmap_scan:10.77.0.10", "ok")
+    assert called["gemini"] is True
+
+
 def test_scope_blocks_injected_target_even_if_planner_returned_it():
     from argus import scope as scopemod
     a = store.get("assessment", AID, Assessment)

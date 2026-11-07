@@ -140,26 +140,62 @@ def redact(text: str) -> str:
     return text
 
 
-def llm_choose(summary: dict, cands: list[Candidate]) -> tuple[str, str] | None:
-    """Ask Claude to pick among the candidate action ids. Returns (action_id, rationale) or None to fall back."""
+def _llm_prompt(summary: dict, options: list[dict]) -> str:
+    return ("You are the planning component of an authorized penetration-testing assistant. Choose exactly ONE next action from the list.\n"
+            "Prefer actions that resolve high-priority open hypotheses at low cost and noise; never repeat completed work.\n"
+            "Reply ONLY with JSON: {\"action_id\": \"...\", \"rationale\": \"2-3 sentences citing the state facts\"}.\n\n"
+            f"STATE:\n{json.dumps(summary, indent=1)[:6000]}\n\nOPTIONS:\n{json.dumps(options, indent=1)}")
+
+
+def _parse_choice(text: str, options: list[dict]) -> tuple[str, str] | None:
+    data = json.loads(text[text.index("{"): text.rindex("}") + 1])
+    if data.get("action_id") in {o["action_id"] for o in options}:
+        return data["action_id"], str(data.get("rationale", ""))[:600]
+    return None
+
+
+def _claude_choose(summary: dict, options: list[dict]) -> tuple[str, str] | None:
     if not config.ANTHROPIC_API_KEY:
         return None
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        options = [{"action_id": c.action_id, "tool": c.tool, "cost": c.cost, "noise": c.noise, "resolves": c.resolves, "why": c.why}
-                   for c in cands if c.kind not in APPROVAL_KINDS and c.kind != "skip"]
-        if not options:
-            return None
-        prompt = ("You are the planning component of an authorized penetration-testing assistant. Choose exactly ONE next action from the list.\n"
-                  "Prefer actions that resolve high-priority open hypotheses at low cost and noise; never repeat completed work.\n"
-                  "Reply ONLY with JSON: {\"action_id\": \"...\", \"rationale\": \"2-3 sentences citing the state facts\"}.\n\n"
-                  f"STATE:\n{json.dumps(summary, indent=1)[:6000]}\n\nOPTIONS:\n{json.dumps(options, indent=1)}")
-        msg = client.messages.create(model=config.LLM_MODEL, max_tokens=400, messages=[{"role": "user", "content": prompt}])
+        msg = client.messages.create(model=config.LLM_MODEL, max_tokens=400,
+                                      messages=[{"role": "user", "content": _llm_prompt(summary, options)}])
         text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-        data = json.loads(text[text.index("{"): text.rindex("}") + 1])
-        if data.get("action_id") in {o["action_id"] for o in options}:
-            return data["action_id"], str(data.get("rationale", ""))[:600]
+        return _parse_choice(text, options)
     except Exception:
         return None
+
+
+def _gemini_choose(summary: dict, options: list[dict]) -> tuple[str, str] | None:
+    """REST call (no extra dependency beyond httpx, already used by every other adapter)."""
+    if not config.GEMINI_API_KEY:
+        return None
+    try:
+        import httpx
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{config.GEMINI_MODEL}:generateContent"
+        body = {"contents": [{"role": "user", "parts": [{"text": _llm_prompt(summary, options)}]}],
+                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 400}}
+        r = httpx.post(url, params={"key": config.GEMINI_API_KEY}, json=body, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        text = "".join(p.get("text", "") for p in data["candidates"][0]["content"]["parts"])
+        return _parse_choice(text, options)
+    except Exception:
+        return None
+
+
+def llm_choose(summary: dict, cands: list[Candidate]) -> tuple[str, str] | None:
+    """Ask the configured LLM to pick among the candidate action ids. Returns (action_id, rationale) or None to fall back.
+    Gemini is tried first when both keys are set (see config.llm_provider_name); either path falls back to the rule
+    planner on any error -- a bad/invalid response here never blocks the assessment, only loses the AI rationale."""
+    options = [{"action_id": c.action_id, "tool": c.tool, "cost": c.cost, "noise": c.noise, "resolves": c.resolves, "why": c.why}
+               for c in cands if c.kind not in APPROVAL_KINDS and c.kind != "skip"]
+    if not options:
+        return None
+    if config.GEMINI_API_KEY:
+        return _gemini_choose(summary, options)
+    if config.ANTHROPIC_API_KEY:
+        return _claude_choose(summary, options)
     return None
