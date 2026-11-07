@@ -20,7 +20,11 @@ MSF_IMAGE = os.getenv("ARGUS_MSF_IMAGE", "metasploitframework/metasploit-framewo
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 LLM_MODEL = os.getenv("ARGUS_LLM_MODEL", "claude-sonnet-5-5")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("ARGUS_GEMINI_MODEL", "gemini-2.0-flash")
+# gemini-2.0-flash and gemini-2.5-flash are both retired for new callers as of this build; gemini-flash-latest
+# (the current stable alias) was observed 503-overloaded on manual testing, so flash-lite is the safer default
+# for a live demo: fast (~1-2s), reliable, and the planner's job (rank a short candidate list, write 2-3 sentences)
+# does not need a larger model.
+GEMINI_MODEL = os.getenv("ARGUS_GEMINI_MODEL", "gemini-flash-lite-latest")
 
 
 def llm_provider_name() -> str:

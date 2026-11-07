@@ -74,7 +74,7 @@ If cybersecurity is new to you, read this section first; everything below assume
 | **Scope** | Hard-coded lab scope (`lab_scope()` in `backend/argus/api.py`) or a `scope` object sent with the request | Targets `10.77.0.0/24`, exclusions `.1 .2 .3`, max intensity `intrusive`, authorized by "Team ARGUS" |
 | **Imported scanner files** (optional) | UI upload or sample buttons | Nessus `.nessus`, Burp issues XML, OpenVAS report XML |
 | **Human decisions** | Approvals tab | Approve plan; approve/reject ZAP active scan or Metasploit check, with analyst name and comment |
-| **Env vars** (optional) | Environment | `ANTHROPIC_API_KEY` (turns on the Claude planner), `ARGUS_DATA`, `ARGUS_TOOL_TIMEOUT`, `ARGUS_MAX_STEPS` ... |
+| **Env vars** (optional) | Environment | `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` (turns on the AI planner; Gemini preferred if both set), `ARGUS_DATA`, `ARGUS_TOOL_TIMEOUT`, `ARGUS_MAX_STEPS` ... |
 
 ### Outputs
 | Output | Where |
@@ -102,8 +102,8 @@ If cybersecurity is new to you, read this section first; everything below assume
 | Frontend | Vanilla JavaScript single page (`frontend/app.js`, `index.html`, `style.css`, SVG illustrations). No build step. Hand-drawn SVG for charts and the attack graph |
 | Lab | Docker Compose: DVWA, OWASP Juice Shop, a Debian "tools" container (nmap, nikto, curl), OWASP ZAP daemon |
 | Security tools | nmap, Nikto, OWASP ZAP (live); Metasploit read-only modules (live, approval-gated); Nessus, Burp, OpenVAS (import-only) |
-| Optional AI | Anthropic Claude (`anthropic` SDK), default model id `claude-sonnet-5-5`, only if `ANTHROPIC_API_KEY` is set |
-| Tests | pytest (23 unit tests) + a live end-to-end script (`scripts/e2e_live.py`) |
+| Optional AI | Google Gemini (REST, `gemini-flash-lite-latest`) if `GEMINI_API_KEY` is set, else Anthropic Claude (`anthropic` SDK, `claude-sonnet-5-5`) if `ANTHROPIC_API_KEY` is set. Gemini verified live; Claude unit-tested only |
+| Tests | pytest (34 unit tests) + a live end-to-end script (`scripts/e2e_live.py`, 98 checks against the real lab) |
 | Run scripts | PowerShell: `scripts/start.ps1`, `scripts/stop.ps1` |
 | License | MIT (ARGUS code only; third-party tools keep their own licenses) |
 
@@ -175,7 +175,7 @@ The planner creates candidate actions from current state (at this point only `nm
 ### Step 2: Investigation loop (`engine._loop`, max 24 steps)
 Each iteration:
 1. **Generate candidates** from state (`planner.generate`), plus hypotheses.
-2. **Choose** one: `rule_choose` sorts runnable (non-approval) candidates by *phase order*, then *most hypotheses resolved*, then *lowest cost*. If `ANTHROPIC_API_KEY` is set, `llm_choose` asks Claude to pick among the same candidates instead; any invalid answer falls back to rules.
+2. **Choose** one: `rule_choose` sorts runnable (non-approval) candidates by *phase order*, then *most hypotheses resolved*, then *lowest cost*. If `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` is set, `llm_choose` asks that model (Gemini preferred) to pick among the same candidates instead; any invalid answer falls back to rules.
 3. **Write a Decision Card**: trigger evidence, hypothesis, every option with CHOSEN/deferred/needs-approval/skipped, rationale, scope check result.
 4. **Execute** (`engine.execute`): scope `enforce` -> audit `action.start` -> run adapter -> save assets -> correlate findings -> audit `action.done`. Failures (tool unavailable, timeout, crash) become a **coverage gap** in the assessment's limitations; the loop continues.
 5. **Update hypotheses** (open -> supported/refuted).
@@ -227,7 +227,7 @@ Candidate details (from `planner.generate`):
 | **Nessus** | Import-only | Parses `.nessus` v2 XML | Info-level plugins are context, not findings. No API. |
 | **Burp** | Import-only | Parses issues XML | Pro REST API is *Planned*, not implemented. |
 | **OpenVAS** | Import-only | Parses report XML | Live GMP integration *Planned*. |
-| **AI planner (Gemini / Claude)** | Optional | Ranks the same code-generated candidates, writes the rationale | Gemini (Google AI Studio, free tier) is tried first if its key is set, else Claude. Unit-tested with a mocked response (rejects a non-candidate action id); not yet run against either provider's live API. |
+| **AI planner (Gemini / Claude)** | **Live (Gemini), untested (Claude)** | Ranks the same code-generated candidates, writes the rationale | Gemini (`gemini-flash-lite-latest`, free tier) is tried first if its key is set, else Claude. **Verified live**: ran a real assessment end-to-end with `GEMINI_API_KEY` set; the engine's decision log shows `"planner": "gemini"` and genuine contextual rationale (e.g. correctly reasoning about a discovered "Apache httpd 2.4.25" service, not generic text). Claude remains unit-tested only (no key available). |
 | Exploit frameworks beyond read-only | Unsupported | - | By design. |
 
 The UI "Tools" tab (`GET /api/matrix`) probes each tool at runtime so the matrix never claims more than the running system can do.
@@ -339,7 +339,7 @@ Requirements: Windows 10/11 (Linux/macOS work too), Docker Desktop with ~6 GB fr
 | React + Vite + Tailwind + Cytoscape | Vanilla JS, hand-made SVG graph | Deviation (documented) |
 | WeasyPrint + Jinja2 PDF | reportlab | Deviation (documented) |
 | SQLite + SQLModel | Plain sqlite3 with JSON blobs | Minor deviation |
-| Claude drives planning via tool calling | Rule planner is the default; an optional Gemini or Claude ranks code-made candidates (never invents one); unit-tested, not yet run against either live API | Deviation, partially tested |
+| Claude drives planning via tool calling | Rule planner is the default; optional Gemini (preferred, verified live) or Claude (unit-tested only) ranks code-made candidates, never invents one | Deviation, Gemini path verified live |
 | OpenVAS live via GMP | Import-only | Deviation (documented) |
 | Metasploit via msfrpcd + RPC | `docker run ... msfconsole -x` with allow-listed aux modules | Different mechanism |
 | nmap `vulners` NSE | Not used; small hand-written version->CVE table | Deviation |
@@ -409,7 +409,7 @@ This section maps directly to the organizers' actual problem statement and the 1
 10. **Debugged with real evidence, not guesswork**: the DVWA active-scan fix is a good "how we actually debug" story for Q&A - traced with ZAP's own `sendRequest` API to prove the auth cookie genuinely wasn't being sent, not assumed.
 
 ## 15. Known weaknesses / risks
-- The Gemini/Claude planner path is unit-tested (mocked response) but has not yet been run against either provider's live API.
+- The Gemini planner path is **verified live** (real assessment, real contextual rationale, confirmed in the decision log). The Claude path remains unit-tested only (no Anthropic key available).
 - `lab_scope()` is hard-coded; the organizer's real lab must be set in `api.py` or sent as a `scope` object.
 - PDF fonts assume Windows paths (falls back to Helvetica elsewhere).
 - KEV snapshot and version->CVE table are tiny; most CVE hints will only appear for the few listed versions.
