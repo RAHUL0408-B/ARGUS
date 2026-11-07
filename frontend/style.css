@@ -25,7 +25,7 @@
   --shadow:0 10px 24px rgba(16,24,40,.08);
 }
 *{box-sizing:border-box}
-html{color-scheme:dark}
+html{color-scheme:dark;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 :root[data-theme="light"]{color-scheme:light}
 body{margin:0;font:14px/1.5 "Segoe UI",system-ui,sans-serif;background:radial-gradient(1200px 600px at 70% -10%,var(--bg2) 0,var(--bg) 60%) fixed;color:var(--ink);min-height:100vh;transition:background-color .15s,color .15s}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--header-bg);border-bottom:1px solid var(--line);padding:10px 20px;position:sticky;top:0;z-index:5;backdrop-filter:blur(8px)}
