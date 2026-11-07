@@ -11,7 +11,7 @@ Source: the code in this repository (read in full), `README.md`, `docs/*.md`, an
 
 > request in plain English -> scope check -> plan -> approval -> real tool scans -> merge duplicates -> remove false positives -> rank risk -> human approval for risky steps -> client-ready PDF report
 
-It was built for **DataOps Innovation Hackathon 2026, Problem Statement 1** (Hackthecore, 2-7 Nov 2026, virtual on Discord, cybersecurity domain). Team: Rahul (RAHUL0408-B) and Pawan. Repo: github.com/RAHUL0408-B/DataOps.
+It was built for **DataOps Innovation Hackathon 2026, Problem Statement 1** (Hackthecore, 2-7 Nov 2026, virtual on Discord, cybersecurity domain). Team: **Binary Builders** - Pawan Singh Bhandari & Rahul Bramhankar (RAHUL0408-B). Repo: github.com/RAHUL0408-B/DataOps.
 
 **The pitch:** "Scanners give you alerts. ARGUS gives you conclusions: each one comes with the evidence behind it, a confidence level, and the reasoning that led to it. A human approves every risky action."
 
@@ -137,7 +137,7 @@ frontend/           index.html, app.js, style.css, img/*.svg
 lab/                docker-compose.yml, tools/Dockerfile
 samples/            synthetic Nessus/Burp/OpenVAS files (written by the team, not real scanner output)
 scripts/            start.ps1, stop.ps1, e2e_live.py, make_test_report.py
-docs/               ARCHITECTURE.md, INTEGRATIONS.md, AI_DISCLOSURE.md, project plan PDF, sample report PDF
+docs/               ARCHITECTURE.md, INTEGRATIONS.md, AI_DISCLOSURE.md, PROJECT_OVERVIEW.md, sample report PDF
 ```
 
 ---
