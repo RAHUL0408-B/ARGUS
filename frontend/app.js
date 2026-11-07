@@ -64,9 +64,23 @@ async function init() {
   $("#modal").onclick = e => { if (e.target.id === "modal") $("#modal").classList.add("hidden"); };
   $("#btnHelp").onclick = showHelp;
   $("#home").onclick = goHome;
+  $("#btnTheme").onclick = toggleTheme;
+  syncThemeButton();
   renderWelcome(); loadHist(); renderMatrix();
   const qs = new URLSearchParams(location.search);          // deep link: ?a=<assessment id>&tab=<tab name>
   if (qs.get("a")) { await open(qs.get("a")); tab(qs.get("tab") || "overview"); }
+}
+function syncThemeButton() {
+  const light = document.documentElement.getAttribute("data-theme") === "light";
+  $("#themeDot").innerHTML = light ? "&#9728;" : "&#9789;";
+  $("#themeLabel").textContent = light ? "Light" : "Dark";
+}
+function toggleTheme() {
+  const light = document.documentElement.getAttribute("data-theme") === "light";
+  const next = light ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem("argus-theme", next); } catch (e) {}
+  syncThemeButton();
 }
 function showHelp() {
   modalHtml("How ARGUS works - plain-English guide", `<p>ARGUS is a security assistant. You describe what to test; it checks it is allowed, runs real scanners, removes noise, asks you before anything risky, and writes a report.</p>
@@ -77,15 +91,20 @@ function goHome() { cur = null; state = null; if (es) es.close(); $("#workspace"
 function renderWelcome() {
   $("#welcome").innerHTML = `<div class="hero"><div><h1>Find real security problems.<br>Skip the false alarms.</h1>
     <p>ARGUS plans a penetration test, runs real tools (nmap, Nikto, OWASP ZAP), double-checks what they report, and writes a client-ready PDF. Every risky step waits for a human.</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="primary" style="width:auto;padding:10px 20px" id="btnTry">Try the example assessment</button><button class="ghost" style="width:auto" id="btnHow">How does it work?</button></div></div>
-    <img src="/img/hero.svg" alt="A shield with an eye watching a network"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="primary" style="width:auto;padding:10px 20px" id="btnTry">Try the example assessment</button><button class="ghost" style="width:auto;border-color:rgba(255,255,255,.3);color:#dce8fb" id="btnHow">How does it work?</button></div></div>
+    <div class="statpanel">
+      <div class="s"><b>99/100</b><span>Live checks passed</span></div>
+      <div class="s"><b>34</b><span>Unit tests, all passing</span></div>
+      <div class="s"><b>SQLi + XSS</b><span>Found live, not staged</span></div>
+      <div class="s"><b>100%</b><span>Intrusive actions human-approved</span></div>
+    </div></div>
   <div class="flow"><img src="/img/flow.svg" alt="Workflow: scope, plan, scan, correlate, approve, report" style="width:100%"></div>
   <div class="grid3">
-   <div class="feat"><div class="ico">&#128737;</div><b>Safe by design</b><p>A code-based scope guard blocks any target that is not on the allowed list. Intrusive actions need a named human approval, and a kill switch stops everything.</p></div>
-   <div class="feat"><div class="ico">&#129504;</div><b>Reasons, doesn't just run tools</b><p>After each result the agent picks the next step and writes a decision card: what it saw, the options it had, and why it chose one.</p></div>
-   <div class="feat"><div class="ico">&#128279;</div><b>Merges and de-noises</b><p>The same problem reported by several tools becomes one finding with all proof kept. A one-request check removes false alarms.</p></div>
-   <div class="feat"><div class="ico">&#129534;</div><b>Never invents facts</b><p>Every claim points to saved tool output with a fingerprint. A grounding check rejects made-up CVEs, scores or evidence.</p></div>
-   <div class="feat"><div class="ico">&#127919;</div><b>Ranked by real risk</b><p>Priority combines severity, exploitability, confidence and attack paths. The formula is shown for every finding.</p></div>
+   <div class="feat"><div class="ico">&#9919;</div><b>Safe by design</b><p>A code-based scope guard blocks any target that is not on the allowed list. Intrusive actions need a named human approval, and a kill switch stops everything.</p></div>
+   <div class="feat"><div class="ico">&#9881;</div><b>Reasons, doesn't just run tools</b><p>After each result the agent picks the next step and writes a decision card: what it saw, the options it had, and why it chose one.</p></div>
+   <div class="feat"><div class="ico">&#8942;</div><b>Merges and de-noises</b><p>The same problem reported by several tools becomes one finding with all proof kept. A one-request check removes false alarms.</p></div>
+   <div class="feat"><div class="ico">&#10003;</div><b>Never invents facts</b><p>Every claim points to saved tool output with a fingerprint. A grounding check rejects made-up CVEs, scores or evidence.</p></div>
+   <div class="feat"><div class="ico">&#9650;</div><b>Ranked by real risk</b><p>Priority combines severity, exploitability, confidence and attack paths. The formula is shown for every finding.</p></div>
    <div class="feat"><div class="ico">&#128196;</div><b>Report and audit trail</b><p>One PDF with summary, evidence, fixes and limits, plus a tamper-evident log of everything the agent did.</p></div>
   </div>
   <div class="card"><h4>Start in 3 steps</h4><ol style="margin:6px 0 0 18px;padding:0"><li>Pick a preset or type what to test (left panel), then press <b>Check scope &amp; make a plan</b>.</li><li>Read the plan, then press <b>Approve plan</b>. Watch the <b>Live activity</b> tab.</li><li>Open <b>Findings</b>, decide any <b>Approvals</b>, then download the <b>Report</b>.</li></ol></div>`;
@@ -159,10 +178,10 @@ function renderNext() {
 
 function donut(counts) {
   const tot = SEV_ORDER.reduce((a, k) => a + (counts[k] || 0), 0), R = 54, C = 2 * Math.PI * R;
-  if (!tot) return `<svg width="150" height="150" viewBox="0 0 150 150"><circle cx="75" cy="75" r="${R}" fill="none" stroke="#1f3452" stroke-width="18"/><text x="75" y="80" text-anchor="middle" fill="#8da2bd" font-size="13">no data</text></svg>`;
+  if (!tot) return `<svg width="150" height="150" viewBox="0 0 150 150"><circle cx="75" cy="75" r="${R}" fill="none" stroke="var(--line)" stroke-width="18"/><text x="75" y="80" text-anchor="middle" fill="var(--mut)" font-size="13">no data</text></svg>`;
   let off = 0, s = `<svg width="150" height="150" viewBox="0 0 150 150"><g transform="rotate(-90 75 75)">`;
   SEV_ORDER.forEach(k => { const v = counts[k] || 0; if (!v) return; const len = C * v / tot; s += `<circle cx="75" cy="75" r="${R}" fill="none" stroke="${SEV_COL[k]}" stroke-width="18" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}"><title>${k}: ${v}</title></circle>`; off += len; });
-  return s + `</g><text x="75" y="74" text-anchor="middle" fill="#e6edf7" font-size="26" font-weight="700">${tot}</text><text x="75" y="92" text-anchor="middle" fill="#8da2bd" font-size="11">findings</text></svg>`;
+  return s + `</g><text x="75" y="74" text-anchor="middle" fill="var(--ink)" font-size="26" font-weight="700">${tot}</text><text x="75" y="92" text-anchor="middle" fill="var(--mut)" font-size="11">findings</text></svg>`;
 }
 function renderOverview() {
   const fs = state.findings, live = fs.filter(f => f.status !== "refuted"), counts = {};

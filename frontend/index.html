@@ -6,11 +6,21 @@
 <title>ARGUS - AI VAPT Agent</title>
 <link rel="icon" href="/img/hero.svg">
 <link rel="stylesheet" href="/style.css">
+<script>
+(function(){
+  try{
+    var qs = new URLSearchParams(location.search).get("theme");
+    var saved = qs || localStorage.getItem("argus-theme");
+    document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
+  }catch(e){ document.documentElement.setAttribute("data-theme","dark"); }
+})();
+</script>
 </head>
 <body>
 <header>
   <div class="brand" id="home" title="Back to start"><img src="/img/hero.svg" alt="" class="logo"><div><b>ARGUS</b><small>AI security-testing agent &middot; lab only &middot; human-approved</small></div></div>
   <div class="badges" id="badges"></div>
+  <button class="themeToggle sm" id="btnTheme" title="Switch between dark and light mode"><span class="dot" id="themeDot">&#9789;</span><span id="themeLabel">Dark</span></button>
   <button class="ghost sm" id="btnHelp">? How it works</button>
 </header>
 <div class="layout">
@@ -23,7 +33,8 @@
     <div class="row"><button class="ghost" id="btnOos" title="No traffic is sent to the public address.">Safety demo: ask for an out-of-scope target</button></div>
     <details><summary>Allowed scope (the safety fence)</summary><div id="scopeBox" class="scopebox"></div></details>
     <h3>Past assessments</h3>
-    <div id="hist"></div>
+    <div id="hist" class="histList"></div>
+    <div class="asideFoot">ARGUS &middot; Binary Builders</div>
   </aside>
   <main>
     <section id="welcome"></section>
