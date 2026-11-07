@@ -4,8 +4,9 @@ Follow this top to bottom. Each step says what to click, what to say (you can re
 
 **Before you start recording:**
 1. Make sure the app is running: open a terminal and ask me "is the server and lab up?" - I'll check and tell you.
-2. Open `http://localhost:8765` in your browser. Full-screen the browser window.
-3. Have this script open on a second screen or printed, so you're not reading it on camera.
+2. **Ask me to re-run `scripts/lab_init.ps1` right before you start step 2 below.** This resets the practice target's login so the live scan reliably finds the real vulnerability on camera. Do this again if you re-record after a break.
+3. Open `http://localhost:8765` in your browser. Full-screen the browser window.
+4. Have this script open on a second screen or printed, so you're not reading it on camera.
 
 ---
 
