@@ -87,11 +87,11 @@ python scripts\make_test_report.py    # builds docs/ARGUS_Test_Report.pdf from t
 
 ## Documentation
 
+- [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) - full project overview
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - components and data flow
 - [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) - tool status matrix and limits
 - [docs/AI_DISCLOSURE.md](docs/AI_DISCLOSURE.md) - AI-generated code and data handling
 - [docs/ARGUS_Sample_VAPT_Report.pdf](docs/ARGUS_Sample_VAPT_Report.pdf) - report from a real run against the lab
-- [docs/ARGUS_Project_Plan.pdf](docs/ARGUS_Project_Plan.pdf) - original plan (see deviations in ARCHITECTURE.md)
 
 ## Licensing assumptions
 
