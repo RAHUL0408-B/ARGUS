@@ -379,7 +379,7 @@ This section maps directly to the organizers' actual problem statement and the 1
 | End-to-End Coverage | 15 | Request -> plan -> approve -> scans run -> findings -> risk ranking -> report, in one assessment |
 | AI Reasoning & Decisions | 20 | Decision Cards (every step's rationale, even without an LLM); with a Gemini/Claude key, the model's own rationale appears and is grounding-checked |
 | Technical Accuracy | 15 | Confidence levels, validation status, evidence links on every finding |
-| Correlation & False Positives | 15 | Cross-tool merge demo (clickjacking from 4 tools -> 1 finding); HSTS-on-HTTP auto-refuted by a real request |
+| Correlation & False Positives | 15 | Cross-tool merge demo (clickjacking from 3 tools -> 1 finding); HSTS-on-HTTP auto-refuted by a real request |
 | Risk Prioritization | 10 | Priority formula with every factor shown and sourced, never a bare number |
 | Safety & Scope Control | 10 | Out-of-scope target refused live; intrusive actions queued for approval; audit chain |
 | Report Quality | 10 | PDF report - all 6 required sections (brief 7.1-7.6) present and verified by the E2E suite |
@@ -400,7 +400,7 @@ This section maps directly to the organizers' actual problem statement and the 1
 1. **Scope guard in code** - the out-of-scope demo (`8.8.8.8`) sends zero traffic and is logged. The `.1` gateway exclusion is a real incident turned into a safeguard.
 2. **Decision Cards** with options considered, not a fixed script - real reasoning, not a fixed pipeline, satisfied without any LLM at all.
 3. **False-positive removal that actually happens** (HSTS on HTTP refuted by a real request).
-4. **Cross-tool merge**: 4 reports of clickjacking become 1 finding with all evidence and confidence 75 (tested).
+4. **Cross-tool merge**: 3 independent reports of clickjacking become 1 finding with all evidence and confidence 75 (tested).
 5. **Evidence you can click**: raw output + SHA-256 + live hash re-verification.
 6. **Tamper-evident audit chain** and a kill switch.
 7. **Honest integration matrix** and an AI disclosure document.
