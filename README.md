@@ -68,6 +68,7 @@ Deep link: `http://localhost:8765/?a=<assessment id>&tab=findings`.
 
 - Default: a deterministic **rule planner** picks among candidate actions that code generated from the current state, and writes a plain-text reason for every option it considered. No API key is required, and this alone satisfies "explain the rationale behind its next steps" with zero external dependency.
 - Optional LLM ranking layer: set `GEMINI_API_KEY` (Google AI Studio, free tier) or `ANTHROPIC_API_KEY` (Claude) and the model ranks the same code-generated candidates and writes the rationale -- it can only pick an action the rule planner already generated, never invent one. If both keys are set, Gemini is tried first. Its answer is validated against the candidate list and against the grounding check (no uncited CVE/CVSS) and falls back to the rule planner on any problem.
+- Honest status: both paths are unit-tested with a mocked API response (prompt-injection guard: a model trying to return a non-candidate action id is rejected). The code has not yet been run against either provider's live API pending a key.
 - The model never executes anything and never sees raw credentials or tokens (`planner.redact` strips them from the prompt first). Confidential data is not sent anywhere in rules-only mode.
 
 ## Integration status (truthful)
