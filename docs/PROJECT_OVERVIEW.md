@@ -156,6 +156,8 @@ docs/               ARCHITECTURE.md, INTEGRATIONS.md, AI_DISCLOSURE.md, project 
 
 The exclusion of `.1/.2/.3` exists because an early run reached the Docker gateway (the developer's PC). That was fixed and is a good story for the demo.
 
+**One-time lab setup.** A fresh DVWA container has no database and ZAP has no authenticated session for it, so `scripts/start.ps1` runs `scripts/lab_init.ps1` automatically after `docker compose up`: it creates the DVWA DB, logs in as `admin`/`password`, confirms the security level is `low`, and registers that session with ZAP's `httpSessions` API so ZAP's own spider and active scan (which never fill in a login form on their own) ride an authenticated session and actually reach `/vulnerabilities/*` instead of bouncing off `login.php`. (A ZAP *Replacer* rule looked like the obvious tool for this and silently did nothing - it only replaces a Cookie header that already exists, never adds one. `httpSessions` is the API actually built for forcing cookies onto every request.) Safe to re-run any time the lab containers are rebuilt.
+
 ---
 
 ## 7. How it works - the full flow
@@ -220,12 +222,12 @@ Candidate details (from `planner.generate`):
 |---|---|---|---|
 | **nmap** | Live | `docker exec argus-tools nmap -sV -T4 --top-ports 1000 --open -oX -` for discovery; `-p <ports> --script http-title,http-methods,http-server-header,http-enum` for enumeration. XML parsed. Excluded IPs passed via `--exclude`. | Rule findings: cleartext protocols (telnet/ftp/...), exposed DB ports, risky HTTP methods, version->CVE from a small reference table (Apache 2.4.49/2.4.50, vsftpd 2.3.4). No `vulners` script. |
 | **Nikto** | Live | `docker exec argus-tools nikto ... -Format json`, output read back then deleted | Nikto gives no severity/CVSS; ARGUS derives a coarse "low/info" from the message and labels it *derived*. |
-| **OWASP ZAP** | Live | ZAP daemon REST API (Host header `zap`): spider -> (active scan) -> wait for passive scan -> fetch up to 500 alerts + URLs | Active scan capped at 4 min; if it overruns, ARGUS stops it and keeps partial alerts, labelled partial. No CVSS invented. |
-| **Metasploit** | Live, approval-gated | `docker run --rm --network argus-lab_labnet metasploitframework/metasploit-framework ./msfconsole -q -x "use <module>; set RHOSTS..; run; exit"` | Only 6 read-only auxiliary modules (http_version, http_header, options, robots_txt, ftp_version, ssh_version). **No exploit modules, no payloads.** Never autonomous. Confirms a finding only if the module output reproduces the version string. |
+| **OWASP ZAP** | Live | ZAP daemon REST API (Host header `zap`): spider -> (active scan) -> wait for passive scan -> fetch up to 500 alerts + URLs | Active scan is restricted to SQLi + reflected/persistent-XSS scanners (the exact classes it exists to confirm) and capped at 4 min; if it overruns, ARGUS stops it and keeps partial alerts, labelled partial. No CVSS invented. |
+| **Metasploit** | Live, approval-gated | `docker run --rm --network argus-lab_labnet metasploitframework/metasploit-framework ./msfconsole -q -x "use <module>; set RHOSTS..; run; exit"` | Only 6 read-only auxiliary modules (http_version, http_header, options, robots_txt, ftp_version, ssh_version). **No exploit modules, no payloads.** Never autonomous. Confirms a finding only if it's version-related (server-disclosure/outdated-software/CVE) AND the module output reproduces the version string; otherwise the verdict is inconclusive, never a false confirm. |
 | **Nessus** | Import-only | Parses `.nessus` v2 XML | Info-level plugins are context, not findings. No API. |
 | **Burp** | Import-only | Parses issues XML | Pro REST API is *Planned*, not implemented. |
 | **OpenVAS** | Import-only | Parses report XML | Live GMP integration *Planned*. |
-| **Claude planner** | Optional, **untested** | Ranks the same candidates | No API key was available to the team. |
+| **AI planner (Gemini / Claude)** | Optional | Ranks the same code-generated candidates, writes the rationale | Gemini (Google AI Studio, free tier) is tried first if its key is set, else Claude. Unit-tested with a mocked response (rejects a non-candidate action id); not yet run against either provider's live API. |
 | Exploit frameworks beyond read-only | Unsupported | - | By design. |
 
 The UI "Tools" tab (`GET /api/matrix`) probes each tool at runtime so the matrix never claims more than the running system can do.
@@ -337,7 +339,7 @@ Requirements: Windows 10/11 (Linux/macOS work too), Docker Desktop with ~6 GB fr
 | React + Vite + Tailwind + Cytoscape | Vanilla JS, hand-made SVG graph | Deviation (documented) |
 | WeasyPrint + Jinja2 PDF | reportlab | Deviation (documented) |
 | SQLite + SQLModel | Plain sqlite3 with JSON blobs | Minor deviation |
-| Claude drives planning via tool calling | Rule planner is the default; Claude only ranks code-made candidates; **never run** | Deviation, untested |
+| Claude drives planning via tool calling | Rule planner is the default; an optional Gemini or Claude ranks code-made candidates (never invents one); unit-tested, not yet run against either live API | Deviation, partially tested |
 | OpenVAS live via GMP | Import-only | Deviation (documented) |
 | Metasploit via msfrpcd + RPC | `docker run ... msfconsole -x` with allow-listed aux modules | Different mechanism |
 | nmap `vulners` NSE | Not used; small hand-written version->CVE table | Deviation |
@@ -355,19 +357,61 @@ Requirements: Windows 10/11 (Linux/macOS work too), Docker Desktop with ~6 GB fr
 
 ---
 
+## 13a. Compliance against the official DataOps brief (PS-1) and judging rubric
+
+This section maps directly to the organizers' actual problem statement and the 100-point rubric (not the earlier internal plan PDF above), so it's the one to check before the demo.
+
+**Required deliverables (brief section 9):**
+
+| Deliverable | Status |
+|---|---|
+| 9.1 Working AI agent demoed against an organizer-authorized lab target | Working against our own Docker lab; needs pointing at whatever target the organizers give at demo time (just a scope change, no code change) |
+| 9.2 Architecture overview (AI models, orchestration, adapters, data flow, state/memory, security boundaries) | `docs/ARCHITECTURE.md` - all six named items present |
+| 9.3 Sample AI-generated, evidence-backed VAPT report (PDF) | `docs/ARGUS_Sample_VAPT_Report.pdf` - from a real run with real SQLi/XSS findings |
+| 9.4 Source repository (setup, dependencies, licensing, execution instructions) | `README.md` + this doc |
+| 9.5 Human-approval demonstration with a decision/audit trace | Approvals tab + `/api/assessments/{id}/audit`; live-tested |
+| 9.6 Integration status matrix (limitations, assumptions, unsupported scenarios) | `docs/INTEGRATIONS.md`, also live at the UI's Tools tab |
+
+**Judging criteria (100 pts) - where each one is demonstrated:**
+
+| Criterion | Pts | Where to show it |
+|---|---|---|
+| End-to-End Coverage | 15 | Request -> plan -> approve -> scans run -> findings -> risk ranking -> report, in one assessment |
+| AI Reasoning & Decisions | 20 | Decision Cards (every step's rationale, even without an LLM); with a Gemini/Claude key, the model's own rationale appears and is grounding-checked |
+| Technical Accuracy | 15 | Confidence levels, validation status, evidence links on every finding |
+| Correlation & False Positives | 15 | Cross-tool merge demo (clickjacking from 4 tools -> 1 finding); HSTS-on-HTTP auto-refuted by a real request |
+| Risk Prioritization | 10 | Priority formula with every factor shown and sourced, never a bare number |
+| Safety & Scope Control | 10 | Out-of-scope target refused live; intrusive actions queued for approval; audit chain |
+| Report Quality | 10 | PDF report - all 6 required sections (brief 7.1-7.6) present and verified by the E2E suite |
+| Efficiency & Robustness | 5 | Restart recovery, partial-result handling, ZAP-killed-mid-scan recovery, clean error on bad input |
+
+**Judges' live-demo checklist (brief section 10) - rehearsal order for the video/demo:**
+1. Enter a request + target, show scope validation (try an out-of-scope IP, watch it get refused).
+2. Show the generated plan with tool selections and reasoning (Decision Cards).
+3. Approve the plan, watch real tools execute (Live activity tab) - and import a sample Nessus/Burp/OpenVAS file to show import-only honestly.
+4. Open Findings: show a merged cross-tool finding and a refuted false positive.
+5. Show risk ranking (the formula, not a bare score) and approve an intrusive ZAP active scan or Metasploit check live.
+6. Download the PDF report, click through to a finding, trace it back to its raw evidence (SHA-256 verified).
+7. Kill a tool mid-scan (or point out the ZAP-down resilience test) and show the assessment still completes; name the two import-only tools honestly.
+
+---
+
 ## 14. Strengths to emphasise at the demo
 1. **Scope guard in code** - the out-of-scope demo (`8.8.8.8`) sends zero traffic and is logged. The `.1` gateway exclusion is a real incident turned into a safeguard.
-2. **Decision Cards** with options considered, not a fixed script.
+2. **Decision Cards** with options considered, not a fixed script - real reasoning, not a fixed pipeline, satisfied without any LLM at all.
 3. **False-positive removal that actually happens** (HSTS on HTTP refuted by a real request).
 4. **Cross-tool merge**: 4 reports of clickjacking become 1 finding with all evidence and confidence 75 (tested).
 5. **Evidence you can click**: raw output + SHA-256 + live hash re-verification.
 6. **Tamper-evident audit chain** and a kill switch.
 7. **Honest integration matrix** and an AI disclosure document.
-8. **Robustness**: restart recovery, partial ZAP results, clean 504 on retest timeout, coverage-gap reporting.
+8. **Robustness**: restart recovery, partial ZAP results, clean 504 on retest timeout, coverage-gap reporting, ZAP-killed-mid-scan recovery.
+9. **A real injection finding, not a staged one**: the live ZAP active scan (after the DVWA auth fix) genuinely finds SQL Injection and reflected XSS on DVWA from scratch, with the request/response evidence saved and hashed - this can be re-run live in front of judges.
+10. **Debugged with real evidence, not guesswork**: the DVWA active-scan fix is a good "how we actually debug" story for Q&A - traced with ZAP's own `sendRequest` API to prove the auth cookie genuinely wasn't being sent, not assumed.
 
 ## 15. Known weaknesses / risks
-- Claude planner path has never been executed.
+- The Gemini/Claude planner path is unit-tested (mocked response) but has not yet been run against either provider's live API.
 - `lab_scope()` is hard-coded; the organizer's real lab must be set in `api.py` or sent as a `scope` object.
 - PDF fonts assume Windows paths (falls back to Helvetica elsewhere).
 - KEV snapshot and version->CVE table are tiny; most CVE hints will only appear for the few listed versions.
-- Unit tests: 29 pass (23 original + 6 new). The live Docker E2E suite has not been re-run after the latest changes.
+- Unit tests: 34 pass. The live Docker E2E suite (`scripts/e2e_live.py`, 98 checks against the real lab) last ran clean at 98/98, 0 failures.
+- A few plan items remain unimplemented by design choice, not oversight: a "-25 if another tool re-tested and didn't reproduce" confidence rule, exposure factors other than 1.0, and a full retest diff view (currently before/after status only). None are required by the official brief.
