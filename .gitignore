@@ -1,8 +1,10 @@
 data/
-local/
 __pycache__/
 *.pyc
 .env
 .pytest_cache/
 node_modules/
 *.db
+docs/ppt.pdf
+docs/script.pdf
+docs/project_overview.pdf
