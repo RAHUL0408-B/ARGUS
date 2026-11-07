@@ -103,7 +103,7 @@ If cybersecurity is new to you, read this section first; everything below assume
 | Lab | Docker Compose: DVWA, OWASP Juice Shop, a Debian "tools" container (nmap, nikto, curl), OWASP ZAP daemon |
 | Security tools | nmap, Nikto, OWASP ZAP (live); Metasploit read-only modules (live, approval-gated); Nessus, Burp, OpenVAS (import-only) |
 | Optional AI | Google Gemini (REST, `gemini-flash-lite-latest`) if `GEMINI_API_KEY` is set, else Anthropic Claude (`anthropic` SDK, `claude-sonnet-5-5`) if `ANTHROPIC_API_KEY` is set. Gemini verified live; Claude unit-tested only |
-| Tests | pytest (34 unit tests) + a live end-to-end script (`scripts/e2e_live.py`, 98 checks against the real lab) |
+| Tests | pytest (34 unit tests) + a live end-to-end script (`scripts/e2e_live.py`, ~100 checks against the real lab) |
 | Run scripts | PowerShell: `scripts/start.ps1`, `scripts/stop.ps1` |
 | License | MIT (ARGUS code only; third-party tools keep their own licenses) |
 
@@ -353,7 +353,7 @@ Requirements: Windows 10/11 (Linux/macOS work too), Docker Desktop with ~6 GB fr
 | "REPLAY" demo mode | Not implemented | Missing (not needed if live) |
 | Retest "diff" view | Retest shows before/after status for validatable classes only | Partial |
 | Redirect/out-of-scope link dropping from crawlers | All tool results are now filtered by scope; discarded hosts are logged as limitations and audited | Fixed |
-| ZAP active scan actually reaching DVWA's vulnerable pages | ZAP never fills in a login form on its own, so an unauthenticated scan only ever found `login.php`. `lab_init` now logs in to DVWA and registers the session with ZAP's `httpSessions` API (a Replacer rule looked right but only replaces a Cookie header that already exists - it never adds one, so it silently did nothing on a fresh ZAP daemon). The active scan is also now restricted to SQLi/XSS scanners so it reaches those checks inside the 4-minute lab cap instead of spending it on ~100 unrelated plugins | Fixed (lab-setup + `zap.py` fix); verified live - 98/98 e2e checks, real SQL Injection/XSS findings from DVWA |
+| ZAP active scan actually reaching DVWA's vulnerable pages | ZAP never fills in a login form on its own, so an unauthenticated scan only ever found `login.php`. `lab_init` now logs in to DVWA and registers the session with ZAP's `httpSessions` API (a Replacer rule looked right but only replaces a Cookie header that already exists - it never adds one, so it silently did nothing on a fresh ZAP daemon). The active scan is also restricted to the fast SQLi/XSS scanners (the *time-based* SQLi variants were dropped - they wait on deliberate response delays and intermittently ate the whole 4-minute budget) | Fixed (lab-setup + `zap.py` fix, found and corrected through live testing, including reverting one attempted fix that made things worse); verified live - real SQL Injection/XSS findings from DVWA, 99/100 e2e checks |
 
 ---
 
@@ -414,5 +414,5 @@ This section maps directly to the organizers' actual problem statement and the 1
 - `lab_scope()` is hard-coded; the organizer's real lab must be set in `api.py` or sent as a `scope` object.
 - PDF fonts assume Windows paths (falls back to Helvetica elsewhere).
 - KEV snapshot and version->CVE table are tiny; most CVE hints will only appear for the few listed versions.
-- Unit tests: 34 pass. The live Docker E2E suite (`scripts/e2e_live.py`, 98 checks against the real lab) last ran clean at 98/98, 0 failures.
+- Unit tests: 34 pass. The live Docker E2E suite (`scripts/e2e_live.py`, ~100 checks against the real lab) last ran 99/100; the one gap is a timing race in the kill-switch test (a fast nmap job finished before the test's 12s sleep elapsed, so there was nothing left to kill), not a safety or correctness issue.
 - A few plan items remain unimplemented by design choice, not oversight: a "-25 if another tool re-tested and didn't reproduce" confidence rule, exposure factors other than 1.0, and a full retest diff view (currently before/after status only). None are required by the official brief.

@@ -2,7 +2,7 @@
 
 ## AI-generated code
 
-Most of this repository (backend, UI, tests, lab files, documents, sample inputs) was written with the assistance of Claude (Anthropic) through Claude Code, directed and reviewed by the team members. Commits are made under the team member's own identity. The code was run, tested (34 automated unit tests plus a live end-to-end suite - `scripts/e2e_live.py`, 98 checks against the real Docker lab, last clean run 98/98) and exercised live against the lab before being committed, but it should be reviewed like any other code.
+Most of this repository (backend, UI, tests, lab files, documents, sample inputs) was written with the assistance of Claude (Anthropic) through Claude Code, directed and reviewed by the team members. Commits are made under the team member's own identity. The code was run, tested (34 automated unit tests plus a live end-to-end suite - `scripts/e2e_live.py`, ~100 checks against the real Docker lab, last run 99/100 with the one gap being an unrelated timing race, not a safety or correctness issue) and exercised live against the lab before being committed, but it should be reviewed like any other code.
 
 ## AI used at runtime
 
