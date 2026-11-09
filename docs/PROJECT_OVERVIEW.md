@@ -11,7 +11,7 @@ Source: the code in this repository (read in full), `README.md`, `docs/*.md`, an
 
 > request in plain English -> scope check -> plan -> approval -> real tool scans -> merge duplicates -> remove false positives -> rank risk -> human approval for risky steps -> client-ready PDF report
 
-It was built for **DataOps Innovation Hackathon 2026, Problem Statement 1** (Hackthecore, 2-7 Nov 2026, virtual on Discord, cybersecurity domain). Team: **Binary Builders** - Pawan Singh Bhandari & Rahul Bramhankar (RAHUL0408-B). Repo: github.com/RAHUL0408-B/DataOps.
+It was built for **DataOps Innovation Hackathon 2026, Problem Statement 1** (Hackthecore, 2-7 Nov 2026, virtual on Discord, cybersecurity domain). Team: **Binary Builders** - Pawan Singh Bhandari & Rahul Bramhankar (RAHUL0408-B). Repo: github.com/RAHUL0408-B/ARGUS.
 
 **The pitch:** "Scanners give you alerts. ARGUS gives you conclusions: each one comes with the evidence behind it, a confidence level, and the reasoning that led to it. A human approves every risky action."
 

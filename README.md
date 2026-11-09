@@ -69,8 +69,8 @@ flowchart TB
 ## Quick start (Windows, Docker Desktop required)
 
 ```powershell
-git clone https://github.com/RAHUL0408-B/DataOps.git
-cd DataOps
+git clone https://github.com/RAHUL0408-B/ARGUS.git
+cd ARGUS
 pip install -r requirements.txt
 .\scripts\start.ps1          # builds + starts the lab containers, then serves the UI
 ```
