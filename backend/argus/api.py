@@ -229,9 +229,13 @@ def audit(aid: str):
 
 @app.get("/api/assessments/{aid}/report.pdf")
 def report(aid: str):
-    _a(aid)
+    a = _a(aid)
+    pdf = build_pdf(aid)
+    if a.status == "review":
+        a.status, a.phase = "complete", "complete"
+        store.put("assessment", a)
     store.audit(aid, "analyst", "report.download", {})
-    return Response(build_pdf(aid), media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=ARGUS_VAPT_{aid}.pdf"})
+    return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=ARGUS_VAPT_{aid}.pdf"})
 
 
 @app.get("/api/assessments/{aid}/events")
