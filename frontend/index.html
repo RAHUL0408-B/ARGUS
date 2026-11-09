@@ -11,8 +11,8 @@
   try{
     var qs = new URLSearchParams(location.search).get("theme");
     var saved = qs || localStorage.getItem("argus-theme");
-    document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
-  }catch(e){ document.documentElement.setAttribute("data-theme","dark"); }
+    document.documentElement.setAttribute("data-theme", saved === "dark" ? "dark" : "light");
+  }catch(e){ document.documentElement.setAttribute("data-theme","light"); }
 })();
 </script>
 </head>
@@ -20,7 +20,7 @@
 <header>
   <div class="brand" id="home" title="Back to start"><img src="/img/hero.svg" alt="" class="logo"><div><b>ARGUS</b><small>AI security-testing agent &middot; lab only &middot; human-approved</small></div></div>
   <div class="badges" id="badges"></div>
-  <button class="themeToggle sm" id="btnTheme" title="Switch between dark and light mode"><span class="dot" id="themeDot">&#9789;</span><span id="themeLabel">Dark</span></button>
+  <button class="themeToggle sm" id="btnTheme" title="Switch between dark and light mode"><span class="dot" id="themeDot">&#9728;</span><span id="themeLabel">Light</span></button>
   <button class="ghost sm" id="btnHelp">? How it works</button>
 </header>
 <section id="landing" class="landing">

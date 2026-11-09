@@ -110,7 +110,7 @@ The default scope in `backend/argus/api.py` (`lab_scope`) allows only the lab ne
 4. Decide pending **Approvals** (risky steps). Use **Ask ARGUS** for grounded questions.
 5. Download the **Report**. After fixing something, press **Retest** on the finding.
 
-A dark and light theme are both available (toggle in the top-right of the header); dark is the default.
+A dark and light theme are both available (toggle in the top-right of the header); light is the default, and your choice is remembered for next time.
 
 Deep link: `http://localhost:8765/?a=<assessment id>&tab=findings`.
 
