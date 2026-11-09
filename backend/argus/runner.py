@@ -136,3 +136,12 @@ def finish_ok(job: Job, evidence_id: Optional[str] = None) -> None:
     job.status, job.finished_at, job.evidence_id = "ok", now(), evidence_id
     store.put("job", job)
     store.event(job.assessment_id, "job", job.model_dump())
+
+
+def finish_fail(job: Job, error: str) -> None:
+    """Close out a job left at 'queued'/'running' when its action failed for a reason run_command
+    itself never saw (e.g. an exception raised by the adapter after a successful subprocess call)."""
+    if job.status in ("queued", "running"):
+        job.status, job.finished_at, job.error = "failed", now(), error[:300]
+        store.put("job", job)
+        store.event(job.assessment_id, "job", job.model_dump())

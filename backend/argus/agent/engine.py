@@ -232,13 +232,17 @@ def execute(aid: str, c: Candidate, actor: str = "agent") -> Optional[AdapterRes
     try:
         res = _dispatch(aid, c, job, a.scope)
     except InterruptedError:
+        runner.finish_fail(job, "cancelled by kill switch")
         _record_action(aid, c.action_id, "failed")
         raise
     except runner.ToolUnavailable as ex:
+        runner.finish_fail(job, f"tool unavailable: {ex}")
         _coverage_gap(aid, c, f"tool unavailable ({str(ex)[:120]})"); _record_action(aid, c.action_id, "failed"); return None
     except TimeoutError as ex:
+        runner.finish_fail(job, str(ex))
         _coverage_gap(aid, c, f"timeout ({ex})"); _record_action(aid, c.action_id, "failed"); return None
     except Exception as ex:
+        runner.finish_fail(job, f"{ex.__class__.__name__}: {str(ex)[:260]}")
         _coverage_gap(aid, c, f"{ex.__class__.__name__}: {str(ex)[:160]}"); _record_action(aid, c.action_id, "failed"); return None
     _drop_out_of_scope(aid, a, c, res)
     n_assets = _save_assets(aid, res)
