@@ -104,11 +104,12 @@ The default scope in `backend/argus/api.py` (`lab_scope`) allows only the lab ne
 
 ## Using the UI
 
+0. The site opens on a landing page (pitch, live stats, workflow diagram). Press **Launch ARGUS** to enter the workspace.
 1. Pick a preset or type a request, then **Check scope & make a plan**.
 2. Read the plan and press **Approve plan**. Watch **Live activity**.
 3. Open **Overview** and **Findings**. Click a finding to see observed evidence, confidence reasons, the priority formula, and the fix.
 4. Decide pending **Approvals** (risky steps). Use **Ask ARGUS** for grounded questions.
-5. Download the **Report**. After fixing something, press **Retest** on the finding.
+5. Download the **Report** - this also marks the assessment complete (6/6 on the stepper). After fixing something, press **Retest** on the finding.
 
 A dark and light theme are both available (toggle in the top-right of the header); light is the default, and your choice is remembered for next time.
 
@@ -137,11 +138,22 @@ python scripts\make_test_report.py    # builds docs/ARGUS_Test_Report.pdf from t
 
 ## Documentation
 
-- [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) - full project overview
+- [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) - full project overview, including a section-by-section mapping to the brief's required deliverables and the 100-point judging rubric
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - components and data flow
 - [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) - tool status matrix and limits
 - [docs/AI_DISCLOSURE.md](docs/AI_DISCLOSURE.md) - AI-generated code and data handling
 - [docs/ARGUS_Sample_VAPT_Report.pdf](docs/ARGUS_Sample_VAPT_Report.pdf) - report from a real run against the lab
+
+## Required deliverables (brief section 9)
+
+| # | Deliverable | Where |
+|---|---|---|
+| 9.1 | Working agent demoed against an authorized lab target | This repo, run against the Docker lab below; scope swaps to an organizer target with no code change |
+| 9.2 | Architecture overview | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| 9.3 | Sample AI-generated, evidence-backed VAPT report | [docs/ARGUS_Sample_VAPT_Report.pdf](docs/ARGUS_Sample_VAPT_Report.pdf) |
+| 9.4 | Source repository (setup, dependencies, licensing, execution) | This README + [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) |
+| 9.5 | Human-approval demonstration with a decision/audit trace | **Approvals** tab + `GET /api/assessments/{id}/audit` |
+| 9.6 | Integration status matrix (limitations, assumptions, unsupported scenarios) | [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md), also live at the UI's **Tools** tab |
 
 ## Licensing assumptions
 

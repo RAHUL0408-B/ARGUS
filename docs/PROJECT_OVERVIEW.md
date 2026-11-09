@@ -286,12 +286,14 @@ Cover (scope, exclusions, authorized by, window, audit-chain status) -> 1 Execut
 
 ## 10. Web UI (what the user sees)
 
-Left panel: request box, presets ("Web app check", "One server, safe only", "Juice Shop"), **Check scope & make a plan**, a **safety demo** button that asks for `8.8.8.8` and `scanme.nmap.org` (rejected, no traffic), the allowed-scope box, past assessments.
+Landing page (shown first, before any workspace UI): pitch, live stats (99/100 live checks, 34 unit tests, SQLi+XSS found live, 100% intrusive actions human-approved), the 6-stage workflow diagram, a feature grid, and a **Launch ARGUS** button that enters the workspace. A direct deep link (`?a=<id>`) skips straight past it into a specific assessment.
 
-Workspace: status bar, 6-step stepper (Scope, Plan, Scan, Approve, Review, Report), a "what to do next" banner, and tabs:
+Left panel (inside the workspace): request box, presets ("Web app check", "One server, safe only", "Juice Shop"), **Check scope & make a plan**, a **safety demo** button that asks for `8.8.8.8` and `scanme.nmap.org` (rejected, no traffic), the allowed-scope box, past assessments.
+
+Workspace: status bar, 6-step stepper (Scope, Plan, Scan, Approve, Review, Report - the last step completes when the PDF report is downloaded), a "what to do next" banner, and tabs:
 **Overview** (tiles, severity donut, safety summary, top risks) / **Plan & reasoning** (scope check, Decision Cards, hypotheses) / **Live activity** (tool runs, event stream) / **Findings** (filter, search, import, detail with OBSERVED vs ANALYSIS, Retest, request Metasploit check) / **Attack paths** / **Approvals** / **Ask ARGUS** / **Report & audit** / **Tools** (integration matrix).
 
-Live updates use Server-Sent Events. Deep link: `/?a=<assessment id>&tab=findings`.
+A dark and light theme are both available (header toggle, top-right); light is the default and the choice is remembered per browser. Live updates use Server-Sent Events. Deep link: `/?a=<assessment id>&tab=findings`.
 
 ---
 
