@@ -116,3 +116,18 @@ svg text{font:11px "Segoe UI",sans-serif}
 .toast.bad{border-color:var(--bad)}
 .sevbar{display:flex;gap:2px;height:10px;border-radius:5px;overflow:hidden;margin:4px 0}
 @media(max-width:1000px){.layout{grid-template-columns:1fr;height:auto}aside{border-right:none;border-bottom:1px solid var(--line);max-height:none}.hero,.two{grid-template-columns:1fr}.grid3,.grid4{grid-template-columns:1fr 1fr}}
+
+/* landing */
+.landing{max-width:1080px;margin:0 auto;padding:60px 24px 70px}
+.landingTop{text-align:center;margin-bottom:34px}
+.landingMark{width:76px;height:76px;margin-bottom:20px}
+.landing h1{margin:0 0 14px;font-size:40px;line-height:1.18;color:var(--ink);letter-spacing:-.5px}
+.landingSub{max-width:620px;margin:0 auto 26px;color:var(--mut);font-size:15.5px;line-height:1.55}
+.landingCta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.landingStats{grid-template-columns:repeat(4,1fr);max-width:900px;margin:0 auto 28px}
+.landingStats .s{background:var(--card);border:1px solid var(--line);text-align:center;box-shadow:var(--shadow)}
+.landingStats .s b{color:var(--ink)}.landingStats .s span{color:var(--mut)}
+.landingFoot{text-align:center;color:var(--mut);font-size:12px;margin-top:34px}
+button.lg{width:auto;padding:14px 30px;font-size:15px;border-radius:10px}
+@media(max-width:1000px){.landing{padding:40px 20px 50px}.landing h1{font-size:30px}.landingStats{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.landingStats{grid-template-columns:1fr}}

@@ -65,11 +65,14 @@ async function init() {
   $("#btnHelp").onclick = showHelp;
   $("#home").onclick = goHome;
   $("#btnTheme").onclick = toggleTheme;
+  $("#btnLaunch").onclick = enterApp;
+  $("#btnLandHow").onclick = showHelp;
   syncThemeButton();
   renderWelcome(); loadHist(); renderMatrix();
   const qs = new URLSearchParams(location.search);          // deep link: ?a=<assessment id>&tab=<tab name>
-  if (qs.get("a")) { await open(qs.get("a")); tab(qs.get("tab") || "overview"); }
+  if (qs.get("a")) { enterApp(); await open(qs.get("a")); tab(qs.get("tab") || "overview"); }
 }
+function enterApp() { $("#landing").classList.add("hidden"); $("#appLayout").classList.remove("hidden"); }
 function syncThemeButton() {
   const light = document.documentElement.getAttribute("data-theme") === "light";
   $("#themeDot").innerHTML = light ? "&#9728;" : "&#9789;";
@@ -89,8 +92,8 @@ function showHelp() {
 function goHome() { cur = null; state = null; if (es) es.close(); $("#workspace").classList.add("hidden"); $("#welcome").classList.remove("hidden"); loadHist(); }
 
 function renderWelcome() {
-  $("#welcome").innerHTML = `<div class="hero"><div><h1>Find real security problems.<br>Skip the false alarms.</h1>
-    <p>ARGUS plans a penetration test, runs real tools (nmap, Nikto, OWASP ZAP), double-checks what they report, and writes a client-ready PDF. Every risky step waits for a human.</p>
+  $("#welcome").innerHTML = `<div class="hero"><div><h1>Ready when you are.</h1>
+    <p>Pick a preset on the left or describe what to test in plain English, then check the scope and make a plan. Nothing is scanned until you approve it.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="primary" style="width:auto;padding:10px 20px" id="btnTry">Try the example assessment</button><button class="ghost" style="width:auto;border-color:rgba(255,255,255,.3);color:#dce8fb" id="btnHow">How does it work?</button></div></div>
     <div class="statpanel">
       <div class="s"><b>99/100</b><span>Live checks passed</span></div>
@@ -98,15 +101,6 @@ function renderWelcome() {
       <div class="s"><b>SQLi + XSS</b><span>Found live, not staged</span></div>
       <div class="s"><b>100%</b><span>Intrusive actions human-approved</span></div>
     </div></div>
-  <div class="flow"><img src="/img/flow.svg" alt="Workflow: scope, plan, scan, correlate, approve, report" style="width:100%"></div>
-  <div class="grid3">
-   <div class="feat"><div class="ico">&#9919;</div><b>Safe by design</b><p>A code-based scope guard blocks any target that is not on the allowed list. Intrusive actions need a named human approval, and a kill switch stops everything.</p></div>
-   <div class="feat"><div class="ico">&#9881;</div><b>Reasons, doesn't just run tools</b><p>After each result the agent picks the next step and writes a decision card: what it saw, the options it had, and why it chose one.</p></div>
-   <div class="feat"><div class="ico">&#8942;</div><b>Merges and de-noises</b><p>The same problem reported by several tools becomes one finding with all proof kept. A one-request check removes false alarms.</p></div>
-   <div class="feat"><div class="ico">&#10003;</div><b>Never invents facts</b><p>Every claim points to saved tool output with a fingerprint. A grounding check rejects made-up CVEs, scores or evidence.</p></div>
-   <div class="feat"><div class="ico">&#9650;</div><b>Ranked by real risk</b><p>Priority combines severity, exploitability, confidence and attack paths. The formula is shown for every finding.</p></div>
-   <div class="feat"><div class="ico">&#128196;</div><b>Report and audit trail</b><p>One PDF with summary, evidence, fixes and limits, plus a tamper-evident log of everything the agent did.</p></div>
-  </div>
   <div class="card"><h4>Start in 3 steps</h4><ol style="margin:6px 0 0 18px;padding:0"><li>Pick a preset or type what to test (left panel), then press <b>Check scope &amp; make a plan</b>.</li><li>Read the plan, then press <b>Approve plan</b>. Watch the <b>Live activity</b> tab.</li><li>Open <b>Findings</b>, decide any <b>Approvals</b>, then download the <b>Report</b>.</li></ol></div>`;
   $("#btnTry").onclick = () => create(PRESETS[0][1]);
   $("#btnHow").onclick = showHelp;

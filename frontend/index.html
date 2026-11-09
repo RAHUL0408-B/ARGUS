@@ -23,7 +23,31 @@
   <button class="themeToggle sm" id="btnTheme" title="Switch between dark and light mode"><span class="dot" id="themeDot">&#9789;</span><span id="themeLabel">Dark</span></button>
   <button class="ghost sm" id="btnHelp">? How it works</button>
 </header>
-<div class="layout">
+<section id="landing" class="landing">
+  <div class="landingTop">
+    <img src="/img/hero.svg" alt="" class="landingMark">
+    <h1>Find real security problems.<br>Skip the false alarms.</h1>
+    <p class="landingSub">ARGUS plans a penetration test, runs real tools (nmap, Nikto, OWASP ZAP), double-checks what they report, and writes a client-ready PDF. Every risky step waits for a human.</p>
+    <div class="landingCta"><button class="primary lg" id="btnLaunch">Launch ARGUS &rarr;</button><button class="ghost lg" id="btnLandHow">How does it work?</button></div>
+  </div>
+  <div class="statpanel landingStats">
+    <div class="s"><b>99/100</b><span>Live checks passed</span></div>
+    <div class="s"><b>34</b><span>Unit tests, all passing</span></div>
+    <div class="s"><b>SQLi + XSS</b><span>Found live, not staged</span></div>
+    <div class="s"><b>100%</b><span>Intrusive actions human-approved</span></div>
+  </div>
+  <div class="flow"><img src="/img/flow.svg" alt="Workflow: scope, plan, scan, correlate, approve, report" style="width:100%"></div>
+  <div class="grid3">
+   <div class="feat"><div class="ico">&#9919;</div><b>Safe by design</b><p>A code-based scope guard blocks any target that is not on the allowed list. Intrusive actions need a named human approval, and a kill switch stops everything.</p></div>
+   <div class="feat"><div class="ico">&#9881;</div><b>Reasons, doesn't just run tools</b><p>After each result the agent picks the next step and writes a decision card: what it saw, the options it had, and why it chose one.</p></div>
+   <div class="feat"><div class="ico">&#8942;</div><b>Merges and de-noises</b><p>The same problem reported by several tools becomes one finding with all proof kept. A one-request check removes false alarms.</p></div>
+   <div class="feat"><div class="ico">&#10003;</div><b>Never invents facts</b><p>Every claim points to saved tool output with a fingerprint. A grounding check rejects made-up CVEs, scores or evidence.</p></div>
+   <div class="feat"><div class="ico">&#9650;</div><b>Ranked by real risk</b><p>Priority combines severity, exploitability, confidence and attack paths. The formula is shown for every finding.</p></div>
+   <div class="feat"><div class="ico">&#128196;</div><b>Report and audit trail</b><p>One PDF with summary, evidence, fixes and limits, plus a tamper-evident log of everything the agent did.</p></div>
+  </div>
+  <div class="landingFoot">ARGUS &middot; Binary Builders &middot; DataOps Innovation Hackathon 2026</div>
+</section>
+<div class="layout hidden" id="appLayout">
   <aside>
     <h3>1 &middot; What should ARGUS test?</h3>
     <textarea id="req" rows="4" aria-label="Describe the test in plain English"></textarea>
