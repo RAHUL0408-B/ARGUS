@@ -1,7 +1,7 @@
 # ARGUS - AI-Powered Unified VAPT Agent
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-1f6fb2.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/unit%20tests-41%20passing-2e7d32.svg)](backend/tests)
+[![Tests](https://img.shields.io/badge/unit%20tests-46%20passing-2e7d32.svg)](backend/tests)
 [![Python](https://img.shields.io/badge/python-3.11%2B-38bdf8.svg)](requirements.txt)
 [![Docker](https://img.shields.io/badge/lab-docker%20compose-0b6bcb.svg)](lab/docker-compose.yml)
 
@@ -130,7 +130,7 @@ See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md). Summary: nmap, Nikto, OWASP ZA
 
 ```powershell
 cd backend
-python -m pytest -q      # 41 tests: scope guard, custom-scope validation, audit chain, parsers, correlation, risk, grounding, report, robustness, out-of-scope filtering, criticality, redaction, retest history, LLM candidate-injection guard (Claude + Gemini)
+python -m pytest -q      # 46 tests: scope guard, custom-scope validation, audit chain, parsers, correlation, risk, grounding, report, robustness, out-of-scope filtering, criticality, redaction, retest history, LLM candidate-injection guard (Claude + Gemini)
 cd ..
 python scripts\e2e_live.py           # live end-to-end suite against the lab (server + lab must be running)
 python scripts\make_test_report.py    # builds docs/ARGUS_Test_Report.pdf from the results

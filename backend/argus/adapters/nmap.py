@@ -29,7 +29,9 @@ def parse_xml(assessment_id: str, xml_text: str, ev_id: str) -> AdapterResult:
         addr = next((a.get("addr") for a in h.findall("address") if a.get("addrtype") in ("ipv4", "ipv6")), None)
         if not addr:
             continue
-        res.observations.append(Observation(Asset(host=addr), ev_id, "host", {}))
+        # A target given by name keeps that name, so later steps stay inside a hostname-only scope.
+        host_id = next((hn.get("name") for hn in h.findall("hostnames/hostname") if hn.get("type") == "user" and hn.get("name")), addr)
+        res.observations.append(Observation(Asset(host=host_id), ev_id, "host", {}))
         for p in h.findall("ports/port"):
             state = p.find("state")
             if state is None or state.get("state") != "open":
@@ -39,7 +41,7 @@ def parse_xml(assessment_id: str, xml_text: str, ev_id: str) -> AdapterResult:
             name = sv.get("name", "") if sv is not None else ""
             product = sv.get("product", "") if sv is not None else ""
             version = sv.get("version", "") if sv is not None else ""
-            asset = Asset(host=addr, port=port, protocol=proto, service=name, product=product, version=version)
+            asset = Asset(host=host_id, port=port, protocol=proto, service=name, product=product, version=version)
             res.observations.append(Observation(asset, ev_id, "service", {"extrainfo": sv.get("extrainfo", "") if sv is not None else ""}))
             banner = " ".join(x for x in (product, version) if x)
             if name in CLEARTEXT:

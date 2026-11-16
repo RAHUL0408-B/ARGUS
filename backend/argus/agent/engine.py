@@ -300,8 +300,14 @@ def _dispatch(aid: str, c: Candidate, job: Job, scope: Scope) -> AdapterResult:
     raise ValueError(f"unknown action kind {c.kind}")
 
 
+def nmap_host(target: str) -> str:
+    """nmap scans hosts and networks, not URLs: reduce https://site.org/app to site.org."""
+    return scopemod.host_of(target) if "://" in target else target
+
+
 def _nmap_scan(aid: str, job: Job, target: str, exclusions: list[str]) -> AdapterResult:
     from ..adapters import nmap as nm
+    target = nmap_host(target)
     cmd = build_scan_cmd("nmap_scan", target)
     if "/" in target:
         cmd.remove("-Pn")

@@ -124,7 +124,7 @@ function renderWelcome() {
     <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="primary" style="width:auto;padding:10px 20px" id="btnTry">Try the example assessment</button><button class="ghost" style="width:auto;border-color:rgba(255,255,255,.3);color:#dce8fb" id="btnHow">How does it work?</button></div></div>
     <div class="statpanel">
       <div class="s"><b>99/100</b><span>Live checks passed</span></div>
-      <div class="s"><b>41</b><span>Unit tests, all passing</span></div>
+      <div class="s"><b>46</b><span>Unit tests, all passing</span></div>
       <div class="s"><b>SQLi + XSS</b><span>Found live, not staged</span></div>
       <div class="s"><b>100%</b><span>Intrusive actions human-approved</span></div>
     </div></div>

@@ -17,15 +17,16 @@ def parse_json(assessment_id: str, text: str, ev_id: str, base_url: str = "") ->
     for h in hosts:
         if not isinstance(h, dict):
             continue
-        ip = h.get("ip") or h.get("host") or ""
+        ip = h.get("host") or h.get("ip") or ""   # keep the name that was scanned, so it stays inside a hostname scope
         port = int(h.get("port") or 80)
+        scheme = "https" if port == 443 else "http"
         banner = h.get("banner") or h.get("server_banner") or ""
         for v in h.get("vulnerabilities", []) or []:
             msg = v.get("msg", "").strip()
             if not msg:
                 continue
             url = v.get("url", "/")
-            asset = Asset(host=ip, port=port, service="http", url=f"http://{ip}:{port}{url}")
+            asset = Asset(host=ip, port=port, service=scheme, url=f"{scheme}://{ip}:{port}{url}")
             ml = msg.lower()
             sev = "low" if (any(k in ml for k in ("missing", "not present", "not set", "leaks", "outdated", "directory indexing", "is old"))
                             and "deprecated" not in ml) else "info"
