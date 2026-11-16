@@ -52,8 +52,9 @@ async function init() {
   $("#badges").innerHTML = `<span class="badge ${health.docker ? "ok" : "bad"}">Docker ${health.docker ? "ready" : "not available"}</span>
     <span class="badge" title="Rules-only means ARGUS uses its built-in deterministic planner. Set GEMINI_API_KEY or ANTHROPIC_API_KEY to let that model rank the same candidates and write the rationale.">Planner: ${esc(health.llm)}</span>
     <span class="badge ${health.audit_chain_ok ? "ok" : "bad"}">Audit log ${health.audit_chain_ok ? "intact" : "BROKEN"}</span>`;
-  const sc = await api("/scope/default");
-  $("#scopeBox").innerHTML = `<b>Allowed:</b> ${sc.targets.map(esc).join(", ")}<br><b>Never touched:</b> ${sc.exclusions.map(esc).join(", ")}<br><b>Highest action level:</b> ${esc(sc.max_intensity)} (needs approval)<br><b>Authorized by:</b> ${esc(sc.authorized_by)}`;
+  defaultScope = await api("/scope/default");
+  try { customScope = JSON.parse(localStorage.getItem("argus-scope") || "null"); } catch (e) { customScope = null; }
+  renderScopeBox();
   $("#req").value = PRESETS[0][1];
   $("#presets").innerHTML = PRESETS.map((p, i) => `<button data-i="${i}">${esc(p[0])}</button>`).join("");
   document.querySelectorAll("#presets button").forEach(b => b.onclick = () => { $("#req").value = PRESETS[b.dataset.i][1]; });
@@ -73,6 +74,32 @@ async function init() {
   if (qs.get("a")) { enterApp(); await open(qs.get("a")); tab(qs.get("tab") || "overview"); }
 }
 function enterApp() { $("#landing").classList.add("hidden"); $("#appLayout").classList.remove("hidden"); }
+let defaultScope = null, customScope = null;
+const splitList = s => s.split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+const activeScope = () => customScope || defaultScope;
+function renderScopeBox() {
+  const sc = activeScope();
+  $("#scopeBox").innerHTML = `${customScope ? '<div style="color:var(--warn);margin-bottom:4px"><b>Custom scope active</b> (saved in this browser)</div>' : ""}
+    <b>Allowed:</b> ${sc.targets.map(esc).join(", ")}<br><b>Never touched:</b> ${sc.exclusions.map(esc).join(", ") || "none"}<br><b>Highest action level:</b> ${esc(sc.max_intensity)} (needs approval)<br><b>Authorized by:</b> ${esc(sc.authorized_by)}
+    <div style="display:flex;gap:6px;margin-top:8px"><button class="sm" id="scEdit">Edit scope</button>${customScope ? '<button class="sm" id="scReset">Use lab default</button>' : ""}</div>
+    <div id="scForm" class="hidden" style="margin-top:8px">
+      <label class="small">Allowed targets (IP, CIDR, hostname or URL; one per line)</label><textarea id="scT" rows="3">${esc(sc.targets.join("\n"))}</textarea>
+      <label class="small">Never touch (exclusions)</label><textarea id="scX" rows="2">${esc(sc.exclusions.join("\n"))}</textarea>
+      <label class="small">Authorized by (name)</label><input id="scA" value="${esc(sc.authorized_by)}">
+      <div style="display:flex;gap:6px;margin-top:6px"><button class="sm primary" id="scSave" style="width:auto">Save scope</button><button class="sm" id="scCancel">Cancel</button></div>
+    </div>`;
+  $("#scEdit").onclick = () => $("#scForm").classList.toggle("hidden");
+  $("#scCancel").onclick = () => $("#scForm").classList.add("hidden");
+  if ($("#scReset")) $("#scReset").onclick = () => { customScope = null; try { localStorage.removeItem("argus-scope"); } catch (e) {} renderScopeBox(); toast("Back to the default lab scope."); };
+  $("#scSave").onclick = () => {
+    const targets = splitList($("#scT").value);
+    if (!targets.length) return toast("Add at least one allowed target.", true);
+    if (!$("#scA").value.trim()) return toast("Say who authorized this scope.", true);
+    customScope = { ...defaultScope, id: "scope-custom", name: "Custom scope (set by analyst)", targets, exclusions: splitList($("#scX").value), authorized_by: $("#scA").value.trim(), notes: "Scope entered in the UI by the analyst." };
+    try { localStorage.setItem("argus-scope", JSON.stringify(customScope)); } catch (e) {}
+    renderScopeBox(); toast("Custom scope saved. New assessments will use it.");
+  };
+}
 function syncThemeButton() {
   const light = document.documentElement.getAttribute("data-theme") === "light";
   $("#themeDot").innerHTML = light ? "&#9728;" : "&#9789;";
@@ -97,7 +124,7 @@ function renderWelcome() {
     <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="primary" style="width:auto;padding:10px 20px" id="btnTry">Try the example assessment</button><button class="ghost" style="width:auto;border-color:rgba(255,255,255,.3);color:#dce8fb" id="btnHow">How does it work?</button></div></div>
     <div class="statpanel">
       <div class="s"><b>99/100</b><span>Live checks passed</span></div>
-      <div class="s"><b>34</b><span>Unit tests, all passing</span></div>
+      <div class="s"><b>41</b><span>Unit tests, all passing</span></div>
       <div class="s"><b>SQLi + XSS</b><span>Found live, not staged</span></div>
       <div class="s"><b>100%</b><span>Intrusive actions human-approved</span></div>
     </div></div>
@@ -118,7 +145,7 @@ async function loadHist() {
 }
 async function create(request) {
   if (!request.trim()) return toast("Type what you want tested first.", true);
-  try { const s = await api("/assessments", { request }); await open(s.assessment.id); tab("plan"); loadHist(); } catch (e) { toast(e.message, true); }
+  try { const s = await api("/assessments", { request, scope: customScope || undefined }); await open(s.assessment.id); tab("plan"); loadHist(); } catch (e) { toast(e.message, true); }
 }
 async function open(id) {
   cur = id; events = []; selFinding = null; if (es) es.close();

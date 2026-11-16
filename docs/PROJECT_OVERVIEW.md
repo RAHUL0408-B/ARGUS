@@ -103,7 +103,7 @@ If cybersecurity is new to you, read this section first; everything below assume
 | Lab | Docker Compose: DVWA, OWASP Juice Shop, a Debian "tools" container (nmap, nikto, curl), OWASP ZAP daemon |
 | Security tools | nmap, Nikto, OWASP ZAP (live); Metasploit read-only modules (live, approval-gated); Nessus, Burp, OpenVAS (import-only) |
 | Optional AI | Google Gemini (REST, `gemini-flash-lite-latest`) if `GEMINI_API_KEY` is set, else Anthropic Claude (`anthropic` SDK, `claude-sonnet-5-5`) if `ANTHROPIC_API_KEY` is set. Gemini verified live; Claude unit-tested only |
-| Tests | pytest (34 unit tests) + a live end-to-end script (`scripts/e2e_live.py`, ~100 checks against the real lab) |
+| Tests | pytest (41 unit tests) + a live end-to-end script (`scripts/e2e_live.py`, ~100 checks against the real lab) |
 | Run scripts | PowerShell: `scripts/start.ps1`, `scripts/stop.ps1` |
 | License | MIT (ARGUS code only; third-party tools keep their own licenses) |
 
@@ -286,7 +286,7 @@ Cover (scope, exclusions, authorized by, window, audit-chain status) -> 1 Execut
 
 ## 10. Web UI (what the user sees)
 
-Landing page (shown first, before any workspace UI): pitch, live stats (99/100 live checks, 34 unit tests, SQLi+XSS found live, 100% intrusive actions human-approved), the 6-stage workflow diagram, a feature grid, and a **Launch ARGUS** button that enters the workspace. A direct deep link (`?a=<id>`) skips straight past it into a specific assessment.
+Landing page (shown first, before any workspace UI): pitch, live stats (99/100 live checks, 41 unit tests, SQLi+XSS found live, 100% intrusive actions human-approved), the 6-stage workflow diagram, a feature grid, and a **Launch ARGUS** button that enters the workspace. A direct deep link (`?a=<id>`) skips straight past it into a specific assessment.
 
 Left panel (inside the workspace): request box, presets ("Web app check", "One server, safe only", "Juice Shop"), **Check scope & make a plan**, a **safety demo** button that asks for `8.8.8.8` and `scanme.nmap.org` (rejected, no traffic), the allowed-scope box, past assessments.
 
@@ -416,6 +416,6 @@ This section maps directly to the organizers' actual problem statement and the 1
 - `lab_scope()` is hard-coded; the organizer's real lab must be set in `api.py` or sent as a `scope` object.
 - PDF fonts assume Windows paths (falls back to Helvetica elsewhere).
 - KEV snapshot and version->CVE table are tiny; most CVE hints will only appear for the few listed versions.
-- Unit tests: 34 pass. The live Docker E2E suite (`scripts/e2e_live.py`, ~100 checks against the real lab) usually runs 96-99/97-100; the recurring gap, when it happens, is the DVWA ZAP-session flakiness below, or (separately) a timing race in the kill-switch test (a fast nmap job finished before the test's 12s sleep elapsed, so there was nothing left to kill) - neither is a safety or correctness issue.
+- Unit tests: 41 pass. The live Docker E2E suite (`scripts/e2e_live.py`, ~100 checks against the real lab) usually runs 96-99/97-100; the recurring gap, when it happens, is the DVWA ZAP-session flakiness below, or (separately) a timing race in the kill-switch test (a fast nmap job finished before the test's 12s sleep elapsed, so there was nothing left to kill) - neither is a safety or correctness issue.
 - A few plan items remain unimplemented by design choice, not oversight: a "-25 if another tool re-tested and didn't reproduce" confidence rule, and exposure factors other than 1.0. None are required by the official brief.
 - **DVWA/ZAP authenticated-session flakiness (known, partially mitigated).** The active-scan-finds-nothing bug (section 13 below) was fixed for the common case, but during a long run with many concurrent ZAP jobs across two hosts, the authenticated session ZAP uses for DVWA can still occasionally stop working mid-run - plausibly ZAP's own "track session automatically" behaviour (it updates its stored cookie from *any* Set-Cookie it observes, which can race with DVWA regenerating its session under concurrent load) outliving our control over it. `lab_init` now spiders DVWA and verifies `/vulnerabilities/sqli` is actually reachable before finishing, retrying the whole login+session sequence up to 3 times - this reliably fixes it at setup time (proven: attempt 1 failed, attempt 2 succeeded, in testing) but doesn't guarantee it stays fixed through a very long multi-host run afterward. **For the demo:** re-run `scripts/lab_init.ps1` right before the segment that shows the live SQLi finding, and keep that run focused on DVWA rather than a long two-host sweep - this is the scenario it's been verified reliable in. If it's ever not reproduced live, the sample report (`docs/ARGUS_Sample_VAPT_Report.pdf`) already contains a real one from a verified run.

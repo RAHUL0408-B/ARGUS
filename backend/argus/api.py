@@ -1,6 +1,6 @@
 """FastAPI app: REST + SSE + static UI."""
 from __future__ import annotations
-import asyncio, base64, json
+import asyncio, base64, ipaddress, json
 from pathlib import Path
 from typing import Optional
 from fastapi import FastAPI, HTTPException
@@ -80,8 +80,26 @@ def scope_check(body: dict):
     return {"allowed": d.allowed, "reason": d.reason, "needs_approval": d.needs_approval}
 
 
+def validate_custom_scope(s: Scope) -> None:
+    """A scope typed in the UI must name real targets, say who authorized it, and not be internet-sized."""
+    if not s.targets:
+        raise HTTPException(400, "scope needs at least one target")
+    if not s.authorized_by.strip():
+        raise HTTPException(400, "scope needs an 'authorized by' name")
+    for t in s.targets:
+        host = scopemod.host_of(t)
+        if not host:
+            raise HTTPException(400, f"cannot parse a host from scope target '{t}'")
+        if scopemod._is_net(host) and "/" in host:
+            net = ipaddress.ip_network(host, strict=False)
+            if net.version == 4 and net.prefixlen < 16:
+                raise HTTPException(400, f"scope target {t} is too broad (smallest allowed network is a /16)")
+
+
 @app.post("/api/assessments")
 def create(req: CreateReq):
+    if req.scope:
+        validate_custom_scope(req.scope)
     a = engine.create_assessment(req.request, req.scope or lab_scope(), req.title)
     if a.status != "failed":
         engine.make_plan(a.id)

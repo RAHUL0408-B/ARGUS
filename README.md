@@ -1,7 +1,7 @@
 # ARGUS - AI-Powered Unified VAPT Agent
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-1f6fb2.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/unit%20tests-34%20passing-2e7d32.svg)](backend/tests)
+[![Tests](https://img.shields.io/badge/unit%20tests-41%20passing-2e7d32.svg)](backend/tests)
 [![Python](https://img.shields.io/badge/python-3.11%2B-38bdf8.svg)](requirements.txt)
 [![Docker](https://img.shields.io/badge/lab-docker%20compose-0b6bcb.svg)](lab/docker-compose.yml)
 
@@ -98,7 +98,7 @@ First run pulls images (DVWA, Juice Shop, ZAP, a Debian tools image) and builds 
 | 10.77.0.3 | argus-zap | OWASP ZAP daemon (excluded from scope) |
 | 10.77.0.1 | Docker gateway = your own PC | **excluded from scope** |
 
-The default scope in `backend/argus/api.py` (`lab_scope`) allows only the lab network and excludes .1, .2 and .3. To test an organizer-provided lab, change `targets` and `exclusions` there (or send a `scope` object with `POST /api/assessments`).
+The default scope in `backend/argus/api.py` (`lab_scope`) allows only the lab network and excludes .1, .2 and .3. To test a different authorized target (for example an organizer-provided website), open **Allowed scope (the safety fence)** in the left panel, press **Edit scope**, enter the target (IP, network, hostname or URL), the exclusions and who authorized it, and save. The UI sends that scope with each new assessment; scopes wider than a /16 network or without an authorizer name are rejected. You can also send a `scope` object with `POST /api/assessments`.
 
 `scripts\start.ps1` runs `scripts\lab_init.ps1` automatically after `docker compose up`: it creates the DVWA database (a fresh container has none), logs in as `admin`/`password`, confirms DVWA's security level is `low`, and registers that session with ZAP's **httpSessions API** so ZAP's own spider/active scan (which never fills in a login form by itself) rides an authenticated session and actually reaches `/vulnerabilities/*` instead of bouncing off `login.php`. It then re-spiders and verifies the authenticated pages are actually reachable before finishing, retrying the whole sequence up to 3 times if needed. Safe to re-run any time the lab containers are rebuilt.
 
@@ -130,7 +130,7 @@ See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md). Summary: nmap, Nikto, OWASP ZA
 
 ```powershell
 cd backend
-python -m pytest -q      # 34 tests: scope guard, audit chain, parsers, correlation, risk, grounding, report, robustness, out-of-scope filtering, criticality, redaction, retest history, LLM candidate-injection guard (Claude + Gemini)
+python -m pytest -q      # 41 tests: scope guard, custom-scope validation, audit chain, parsers, correlation, risk, grounding, report, robustness, out-of-scope filtering, criticality, redaction, retest history, LLM candidate-injection guard (Claude + Gemini)
 cd ..
 python scripts\e2e_live.py           # live end-to-end suite against the lab (server + lab must be running)
 python scripts\make_test_report.py    # builds docs/ARGUS_Test_Report.pdf from the results
