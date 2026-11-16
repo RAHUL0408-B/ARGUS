@@ -53,7 +53,8 @@ header button.ghost{width:auto}
 details summary{cursor:pointer;color:var(--mut);margin-top:12px;font-size:12px}
 main{padding:20px 24px;overflow:auto;min-height:0}.hidden{display:none!important}
 .statusbar{margin-bottom:12px;color:var(--mut);font-size:13px}.statusbar b{color:var(--ink)}
-.histList{overflow:auto;max-height:280px;padding-right:2px}
+aside>*{flex-shrink:0}
+.histList{overflow:auto;max-height:280px;min-height:120px;padding-right:2px}
 .asideFoot{margin-top:auto;padding-top:14px;font-size:11px;color:var(--mut);border-top:1px solid var(--line)}
 /* stepper */
 .stepper{display:flex;gap:0;margin-bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 6px;overflow-x:auto;box-shadow:var(--shadow)}

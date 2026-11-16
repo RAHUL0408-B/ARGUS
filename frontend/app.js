@@ -162,7 +162,12 @@ async function open(id) {
 }
 let tm = null;
 function schedule() { clearTimeout(tm); tm = setTimeout(refresh, 600); }
-async function refresh() { if (!cur) return; state = await api("/assessments/" + cur); renderAll(); }
+let lastStatus = null;
+async function refresh() {
+  if (!cur) return;
+  state = await api("/assessments/" + cur); renderAll();
+  if (state.assessment.status !== lastStatus) { lastStatus = state.assessment.status; loadHist(); }
+}
 function renderAll() {
   renderStatus(); renderStepper(); renderNext(); renderOverview(); renderPlan(); renderTimeline(); renderFindings(); renderApprovals(); renderReport(); renderCopilot();
   if (!$("#t-graph").classList.contains("hidden")) renderGraph();
