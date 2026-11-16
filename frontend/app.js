@@ -95,6 +95,10 @@ function renderScopeBox() {
     const targets = splitList($("#scT").value);
     if (!targets.length) return toast("Add at least one allowed target.", true);
     if (!$("#scA").value.trim()) return toast("Say who authorized this scope.", true);
+    const excl = splitList($("#scX").value).map(x => x.toLowerCase());
+    const clash = targets.find(t => excl.includes(t.toLowerCase()));
+    if (clash) return toast(`${clash} is in both lists. Allowed targets are what you may test; Never touch is what you must not. Remove it from Never touch.`, true);
+    if ($("#scA").value.trim() === defaultScope.authorized_by) return toast("Change 'Authorized by' to the person who authorized this test (for example the site owner).", true);
     customScope = { ...defaultScope, id: "scope-custom", name: "Custom scope (set by analyst)", targets, exclusions: splitList($("#scX").value), authorized_by: $("#scA").value.trim(), notes: "Scope entered in the UI by the analyst." };
     try { localStorage.setItem("argus-scope", JSON.stringify(customScope)); } catch (e) {}
     renderScopeBox(); toast("Custom scope saved. New assessments will use it.");
