@@ -55,7 +55,7 @@ async function init() {
   defaultScope = await api("/scope/default");
   try { customScope = JSON.parse(localStorage.getItem("argus-scope") || "null"); } catch (e) { customScope = null; }
   renderScopeBox();
-  $("#req").value = PRESETS[0][1];
+  $("#req").value = "Assess https://your-website.com for web weaknesses. Passive and standard checks only.";
   $("#presets").innerHTML = PRESETS.map((p, i) => `<button data-i="${i}">${esc(p[0])}</button>`).join("");
   document.querySelectorAll("#presets button").forEach(b => b.onclick = () => { $("#req").value = PRESETS[b.dataset.i][1]; });
   document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => tab(b.dataset.t));
