@@ -39,3 +39,7 @@ def test_nmap_gets_a_host_not_a_url():
     assert nmap_host("http://203.0.113.7:8080") == "203.0.113.7"
     assert nmap_host("10.77.0.0/24") == "10.77.0.0/24"
     assert nmap_host("site.example.org") == "site.example.org"
+    from argus.adapters.nmap import build_scan_cmd
+    scan, enum = build_scan_cmd("nmap_scan", "site.example.org"), build_scan_cmd("nmap_enum", "site.example.org", [443])
+    assert "--version-light" in scan and "--version-light" in enum   # full version probing stalls behind a CDN
+    assert "--script-timeout" in enum                                # a slow script must not lose the whole result

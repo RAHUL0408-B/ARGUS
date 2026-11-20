@@ -84,11 +84,13 @@ def _script(aid: str, sc, asset: Asset, ev_id: str, res: AdapterResult) -> None:
 
 
 def build_scan_cmd(kind: str, target: str, ports: list[int] | None = None) -> list[str]:
+    # --version-light: full version probing hangs for minutes on sites behind a CDN (and returns the same result);
+    # --script-timeout: a slow script must give up so nmap still returns its XML instead of being killed with no result.
     host = target
     if kind == "nmap_scan":
-        return ["nmap", "-sV", "-T4", "--top-ports", "1000", "--open", "-Pn", "-oX", "-", host]
+        return ["nmap", "-sV", "--version-light", "-T4", "--top-ports", "1000", "--open", "-Pn", "-oX", "-", host]
     ports_s = ",".join(str(p) for p in (ports or [80]))
-    return ["nmap", "-sV", "-Pn", "-T4", "-p", ports_s, "--script", "http-title,http-methods,http-server-header,http-enum", "-oX", "-", host]
+    return ["nmap", "-sV", "--version-light", "-Pn", "-T4", "-p", ports_s, "--script-timeout", "60s", "--script", "http-title,http-methods,http-server-header,http-enum", "-oX", "-", host]
 
 
 class NmapAdapter(Adapter):
